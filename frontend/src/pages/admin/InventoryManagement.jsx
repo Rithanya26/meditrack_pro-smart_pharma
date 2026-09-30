@@ -15,13 +15,10 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import ErrorState from "../../components/ui/ErrorState";
 import { inventoryService } from "../../services/inventoryService";
 import { useToast } from "../../context/ToastContext";
-import { useAuth } from "../../context/AuthContext";
 import { STOCK_STATUS, EXPIRY_STATUS, formatDate, formatNumber } from "../../utils/helpers";
-import { mockAuditLogs } from "../../data/mockData";
 
 export default function InventoryManagement() {
   const toast = useToast();
-  const { user } = useAuth();
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -95,19 +92,6 @@ export default function InventoryManagement() {
     setSaving(true);
     try {
       await inventoryService.adjust(adjustBatch.id, qty, adjustReason, adjustType);
-      // Log to audit
-      const newAudit = {
-        id: `AUD-${String(mockAuditLogs.length + 1).padStart(3, "0")}`,
-        timestamp: new Date().toISOString(),
-        userId: user.id,
-        userName: user.name,
-        role: user.role,
-        action: "INVENTORY_UPDATED",
-        entity: "Inventory",
-        entityId: adjustBatch.id,
-        description: `Stock adjusted for ${adjustBatch.medicine?.name} batch ${adjustBatch.batchNumber}: ${adjustType === "add" ? "+" : "-"}${qty} units`,
-      };
-      mockAuditLogs.unshift(newAudit);
       toast.success("Inventory adjusted successfully.");
       setAdjustModal(false);
       load();

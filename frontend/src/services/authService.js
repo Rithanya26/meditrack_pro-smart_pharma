@@ -1,27 +1,20 @@
-// Auth service — currently uses mock data, structured for Flask API replacement
-// POST /api/auth/login
-import { mockUsers, mockCredentials } from "../data/mockData";
+import api from "./api";
 
-const MOCK_DELAY = 600;
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function normalizeUser(user) {
+  return { ...user, role: user.role?.toLowerCase(), status: user.status?.toLowerCase() };
 }
 
 export const authService = {
   async login(email, password) {
-    await delay(MOCK_DELAY);
-    const user = mockUsers.find((u) => u.email === email);
-    if (!user || mockCredentials[email] !== password) {
-      throw new Error("Invalid email or password");
+    try {
+      const { data } = await api.post("/auth/login", { email: email.trim(), password });
+      const user = normalizeUser(data);
+      localStorage.setItem("meditrack_token", data.token);
+      localStorage.setItem("meditrack_user", JSON.stringify(user));
+      return user;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Invalid email or password");
     }
-    if (user.status !== "active") {
-      throw new Error("This account has been deactivated. Contact your administrator.");
-    }
-    const token = `mock-jwt-${user.id}-${Date.now()}`;
-    localStorage.setItem("meditrack_token", token);
-    localStorage.setItem("meditrack_user", JSON.stringify(user));
-    return user;
   },
 
   logout() {

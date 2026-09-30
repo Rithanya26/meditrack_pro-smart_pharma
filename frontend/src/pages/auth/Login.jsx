@@ -52,7 +52,7 @@ export default function Login() {
 
   const fillDemo = (demoEmail) => {
     setEmail(demoEmail);
-    setPassword("");
+    setPassword(demoEmail === "admin@meditrack.com" ? "admin123" : "pharma123");
     setError("");
     setErrors({});
   };

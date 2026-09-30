@@ -1,9 +1,8 @@
 import axios from "axios";
 
-// Centralized Axios instance — replace mock services with real API calls later
-// Uses VITE_API_BASE_URL from .env (Flask REST API)
+// Centralized Axios instance for the Spring Boot API.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api",
   headers: {
     "Content-Type": "application/json",
   },

@@ -11,7 +11,7 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 import { TableActions } from "../../components/ui/TableActions";
 import EmptyState from "../../components/ui/EmptyState";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
-import { mockUsers } from "../../data/mockData";
+import { userService } from "../../services/userService";
 import { useToast } from "../../context/ToastContext";
 import { formatDate } from "../../utils/helpers";
 
@@ -28,12 +28,18 @@ export default function PharmacistManagement() {
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setTimeout(() => {
-      setUsers(mockUsers.filter((u) => u.role === "pharmacist"));
+  useEffect(() => { loadUsers(); }, []);
+
+  async function loadUsers() {
+    setLoading(true);
+    try {
+      setUsers(await userService.getPharmacists());
+    } catch {
+      toast.error("Unable to load pharmacists.");
+    } finally {
       setLoading(false);
-    }, 400);
-  }, []);
+    }
+  }
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -64,7 +70,7 @@ export default function PharmacistManagement() {
     if (!formData.email.trim()) e.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) e.email = "Invalid email format";
     else {
-      const dup = mockUsers.find((u) => u.email === formData.email && u.id !== editUser?.id);
+      const dup = users.find((u) => u.email.toLowerCase() === formData.email.toLowerCase() && u.id !== editUser?.id);
       if (dup) e.email = "Email already in use";
     }
     if (!formData.phone.trim()) e.phone = "Phone is required";
@@ -77,40 +83,35 @@ export default function PharmacistManagement() {
     return Object.keys(e).length === 0;
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!validate()) return;
     setSaving(true);
-    setTimeout(() => {
+    try {
       if (editUser) {
-        const idx = mockUsers.findIndex((u) => u.id === editUser.id);
-        mockUsers[idx] = { ...mockUsers[idx], name: formData.name, email: formData.email, phone: formData.phone, status: formData.status };
+        await userService.updatePharmacist(editUser.id, formData);
         toast.success("Pharmacist updated successfully.");
       } else {
-        const newUser = {
-          id: `USR-${String(mockUsers.length + 1).padStart(3, "0")}`,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          role: "pharmacist",
-          status: formData.status,
-          createdAt: new Date().toISOString(),
-          avatar: formData.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase(),
-        };
-        mockUsers.push(newUser);
+        await userService.createPharmacist(formData);
         toast.success("Pharmacist added successfully.");
       }
-      setUsers(mockUsers.filter((u) => u.role === "pharmacist"));
       setModalOpen(false);
+      await loadUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to save pharmacist.");
+    } finally {
       setSaving(false);
-    }, 500);
+    }
   }
 
-  function toggleStatus(u) {
-    const idx = mockUsers.findIndex((x) => x.id === u.id);
-    mockUsers[idx].status = mockUsers[idx].status === "active" ? "inactive" : "active";
-    setUsers([...mockUsers.filter((x) => x.role === "pharmacist")]);
-    toast.success(`Pharmacist ${mockUsers[idx].status === "active" ? "activated" : "deactivated"} successfully.`);
+  async function toggleStatus(u) {
+    try {
+      const updated = await userService.toggleStatus(u.id);
+      setUsers((current) => current.map((user) => user.id === updated.id ? updated : user));
+      toast.success(`Pharmacist ${updated.status === "active" ? "activated" : "deactivated"} successfully.`);
+    } catch {
+      toast.error("Unable to update pharmacist status.");
+    }
   }
 
   const columns = [

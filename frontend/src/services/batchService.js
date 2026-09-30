@@ -1,50 +1,32 @@
-// Batch service — currently uses mock data, structured for Flask API replacement
-// GET /api/batches, POST /api/batches, PUT /api/batches/:id
-import { mockBatches, mockMedicines } from "../data/mockData";
+import api from "./api";
 
-const MOCK_DELAY = 400;
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function normalizeBatch(batch) {
+  return { ...batch, medicineId: batch.medicine?.id, medicine: batch.medicine };
 }
 
 export const batchService = {
   async getAll() {
-    await delay(MOCK_DELAY);
-    return mockBatches.map((b) => ({
-      ...b,
-      medicine: mockMedicines.find((m) => m.id === b.medicineId),
-    }));
+    const { data } = await api.get("/batches");
+    return data.map(normalizeBatch);
   },
 
   async getById(id) {
-    await delay(MOCK_DELAY);
-    const batch = mockBatches.find((b) => b.id === id);
-    if (!batch) return null;
-    return { ...batch, medicine: mockMedicines.find((m) => m.id === batch.medicineId) };
+    const { data } = await api.get(`/batches/${id}`);
+    return normalizeBatch(data);
   },
 
   async getByMedicine(medicineId) {
-    await delay(MOCK_DELAY);
-    return mockBatches
-      .filter((b) => b.medicineId === medicineId)
-      .map((b) => ({ ...b, medicine: mockMedicines.find((m) => m.id === b.medicineId) }));
+    const { data } = await api.get(`/medicines/${medicineId}/batches`);
+    return data.map(normalizeBatch);
   },
 
   async create(data) {
-    await delay(MOCK_DELAY);
-    const newBatch = {
-      ...data,
-      id: `BAT-${String(mockBatches.length + 1).padStart(3, "0")}`,
-    };
-    mockBatches.push(newBatch);
-    return newBatch;
+    const { data: batch } = await api.post("/batches", { ...data, medicine: { id: Number(data.medicineId) } });
+    return normalizeBatch(batch);
   },
 
   async update(id, data) {
-    await delay(MOCK_DELAY);
-    const idx = mockBatches.findIndex((b) => b.id === id);
-    if (idx === -1) throw new Error("Batch not found");
-    mockBatches[idx] = { ...mockBatches[idx], ...data };
-    return mockBatches[idx];
+    const { data: batch } = await api.put(`/batches/${id}`, { ...data, medicine: { id: Number(data.medicineId) } });
+    return normalizeBatch(batch);
   },
 };

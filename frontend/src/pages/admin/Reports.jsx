@@ -6,7 +6,10 @@ import Button from "../../components/ui/Button";
 import { useToast } from "../../context/ToastContext";
 import DataTable from "../../components/ui/DataTable";
 import { formatDate } from "../../utils/helpers";
-import { mockMedicines, mockBatches, mockDispensing, mockDispensingTransactions, mockAuditLogs } from "../../data/mockData";
+import { medicineService } from "../../services/medicineService";
+import { batchService } from "../../services/batchService";
+import { dispensingService } from "../../services/dispensingService";
+import { auditService } from "../../services/auditService";
 import { daysUntilExpiry, getExpiryStatus, getStockStatus } from "../../utils/helpers";
 
 const REPORT_TYPES = [
@@ -25,9 +28,12 @@ export default function Reports() {
   const [generated, setGenerated] = useState(null);
   const [generating, setGenerating] = useState(false);
 
-  function generateReport(type) {
+  async function generateReport(type) {
     setGenerating(true);
-    setTimeout(() => {
+    try {
+      const [medicines, batches, transactions, auditLogs] = await Promise.all([
+        medicineService.getAll(), batchService.getAll(), dispensingService.getAll(), auditService.getAll(),
+      ]);
       let data = [];
       let columns = [];
 
@@ -38,10 +44,10 @@ export default function Reports() {
           { key: "stock", header: "Total Stock", render: (r) => r.stock },
           { key: "status", header: "Status", render: (r) => r.status },
         ];
-        data = mockMedicines.map((m) => {
-          const batches = mockBatches.filter((b) => b.medicineId === m.id);
-          const stock = batches.reduce((s, b) => s + b.quantity, 0);
-          return { id: m.id, name: m.name, category: m.category, stock, status: getStockStatus(stock, batches[0]?.minimumStock || 0) };
+        data = medicines.map((medicine) => {
+          const medicineBatches = batches.filter((batch) => batch.medicineId === medicine.id);
+          const stock = medicineBatches.reduce((s, batch) => s + batch.quantity, 0);
+          return { id: medicine.id, name: medicine.name, category: medicine.category, stock, status: getStockStatus(stock, medicineBatches[0]?.minimumStock || 0) };
         });
       } else if (type === "expiry") {
         columns = [
@@ -51,10 +57,9 @@ export default function Reports() {
           { key: "days", header: "Days Left", render: (r) => r.days },
           { key: "status", header: "Status", render: (r) => r.status },
         ];
-        data = mockBatches.map((b) => {
-          const med = mockMedicines.find((m) => m.id === b.medicineId);
-          const days = daysUntilExpiry(b.expiryDate);
-          return { id: b.id, medicine: med?.name, batch: b.batchNumber, expiry: b.expiryDate, days, status: getExpiryStatus(days) };
+        data = batches.map((batch) => {
+          const days = daysUntilExpiry(batch.expiryDate);
+          return { id: batch.id, medicine: batch.medicine?.name, batch: batch.batchNumber, expiry: batch.expiryDate, days, status: getExpiryStatus(days) };
         });
       } else if (type === "dispensing") {
         columns = [
@@ -64,16 +69,7 @@ export default function Reports() {
           { key: "pharmacist", header: "Pharmacist", render: (r) => r.pharmacist },
           { key: "date", header: "Date", render: (r) => formatDate(r.date) },
         ];
-        data = [
-          ...mockDispensing.map((d) => ({ id: d.id, medicine: d.medicineName, quantity: d.quantity, pharmacist: d.pharmacistName, date: d.date })),
-          ...mockDispensingTransactions.flatMap((transaction) => transaction.items.map((item) => ({
-            id: transaction.id,
-            medicine: item.medicineName,
-            quantity: item.quantity,
-            pharmacist: transaction.pharmacistName,
-            date: transaction.date,
-          }))),
-        ];
+        data = transactions.flatMap((transaction) => transaction.items.map((item) => ({ id: transaction.id, medicine: item.medicineName, quantity: item.quantity, pharmacist: transaction.pharmacistName, date: transaction.date })));
       } else if (type === "audit") {
         columns = [
           { key: "timestamp", header: "Timestamp", render: (r) => formatDate(r.timestamp) },
@@ -81,7 +77,7 @@ export default function Reports() {
           { key: "action", header: "Action", render: (r) => r.action },
           { key: "description", header: "Description", render: (r) => r.description },
         ];
-        data = mockAuditLogs.map((l) => ({ id: l.id, timestamp: l.timestamp, user: l.userName, action: l.action, description: l.description }));
+        data = auditLogs.map((log) => ({ id: log.id, timestamp: log.timestamp, user: log.userName, action: log.action, description: log.description }));
       } else if (type === "lowstock") {
         columns = [
           { key: "medicine", header: "Medicine", render: (r) => r.medicine },
@@ -89,18 +85,20 @@ export default function Reports() {
           { key: "stock", header: "Stock", render: (r) => r.stock },
           { key: "min", header: "Minimum", render: (r) => r.min },
         ];
-        data = mockBatches
-          .filter((b) => b.quantity <= b.minimumStock)
-          .map((b) => {
-            const med = mockMedicines.find((m) => m.id === b.medicineId);
-            return { id: b.id, medicine: med?.name, batch: b.batchNumber, stock: b.quantity, min: b.minimumStock };
+        data = batches
+          .filter((batch) => batch.quantity <= batch.minimumStock)
+          .map((batch) => {
+            return { id: batch.id, medicine: batch.medicine?.name, batch: batch.batchNumber, stock: batch.quantity, min: batch.minimumStock };
           });
       }
 
       setGenerated({ type, columns, data, count: data.length });
-      setGenerating(false);
       toast.success("Report generated successfully.");
-    }, 600);
+    } catch {
+      toast.error("Unable to generate report from the database.");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   return (

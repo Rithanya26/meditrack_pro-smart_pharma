@@ -1,70 +1,42 @@
-// Medicine service — currently uses mock data, structured for Flask API replacement
-// GET /api/medicines, POST /api/medicines, PUT /api/medicines/:id
-import { mockMedicines, mockBatches, mockDispensing, mockDispensingTransactions } from "../data/mockData";
-
-const MOCK_DELAY = 400;
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import api from "./api";
 
 export const medicineService = {
   async getAll() {
-    await delay(MOCK_DELAY);
-    return [...mockMedicines];
+    const { data } = await api.get("/medicines");
+    return data.map((medicine) => ({ ...medicine, status: medicine.status.toLowerCase() }));
   },
 
   async getById(id) {
-    await delay(MOCK_DELAY);
-    return mockMedicines.find((m) => m.id === id) || null;
+    const { data } = await api.get(`/medicines/${id}`);
+    return { ...data, status: data.status.toLowerCase() };
   },
 
   async create(data) {
-    await delay(MOCK_DELAY);
-    const newMed = {
-      ...data,
-      id: `MED-${String(mockMedicines.length + 1).padStart(3, "0")}`,
-      createdAt: new Date().toISOString(),
-    };
-    mockMedicines.push(newMed);
-    return newMed;
+    const { data: medicine } = await api.post("/medicines", { ...data, status: data.status?.toUpperCase() || "ACTIVE" });
+    return { ...medicine, status: medicine.status.toLowerCase() };
   },
 
   async update(id, data) {
-    await delay(MOCK_DELAY);
-    const idx = mockMedicines.findIndex((m) => m.id === id);
-    if (idx === -1) throw new Error("Medicine not found");
-    mockMedicines[idx] = { ...mockMedicines[idx], ...data };
-    return mockMedicines[idx];
+    const { data: medicine } = await api.put(`/medicines/${id}`, { ...data, status: data.status?.toUpperCase() || "ACTIVE" });
+    return { ...medicine, status: medicine.status.toLowerCase() };
   },
 
   async toggleStatus(id) {
-    await delay(MOCK_DELAY);
-    const idx = mockMedicines.findIndex((m) => m.id === id);
-    if (idx === -1) throw new Error("Medicine not found");
-    mockMedicines[idx].status = mockMedicines[idx].status === "active" ? "inactive" : "active";
-    return mockMedicines[idx];
+    const { data: medicine } = await api.patch(`/medicines/${id}/toggle-status`);
+    return { ...medicine, status: medicine.status.toLowerCase() };
   },
 
   // Get batches for a specific medicine
   async getBatches(medicineId) {
-    await delay(MOCK_DELAY);
-    return mockBatches.filter((b) => b.medicineId === medicineId);
+    const { data } = await api.get(`/medicines/${medicineId}/batches`);
+    return data.map((batch) => ({ ...batch, medicineId: batch.medicine?.id }));
   },
 
   // Get dispensing history for a specific medicine
   async getDispensingHistory(medicineId) {
-    await delay(MOCK_DELAY);
-    const legacy = mockDispensing.filter((d) => d.medicineId === medicineId);
-    const grouped = mockDispensingTransactions.flatMap((transaction) => transaction.items
-      .filter((item) => item.medicineId === medicineId)
-      .map((item) => ({
-        ...item,
-        id: transaction.id,
-        date: transaction.date,
-        pharmacistName: transaction.pharmacistName,
-        customerName: transaction.customerName,
-        customerPhone: transaction.customerPhone,
-      })));
-    return [...legacy, ...grouped];
+    const { data } = await api.get("/dispensing");
+    return data.flatMap((transaction) => transaction.items
+      .filter((item) => item.medicine?.id === Number(medicineId))
+      .map((item) => ({ ...item, id: transaction.id, date: transaction.transactionDate, pharmacistName: transaction.pharmacist?.name, customerName: transaction.customerName, customerPhone: transaction.customerPhone })));
   },
 };

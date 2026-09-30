@@ -4,8 +4,9 @@ import PageHeader from "../../components/common/PageHeader";
 import Card from "../../components/ui/Card";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import ErrorState from "../../components/ui/ErrorState";
-import { dashboardService } from "../../services/dashboardService";
-import { mockBatches, mockMedicines, mockDispensing } from "../../data/mockData";
+import { medicineService } from "../../services/medicineService";
+import { batchService } from "../../services/batchService";
+import { dispensingService } from "../../services/dispensingService";
 import { daysUntilExpiry, getExpiryStatus, getStockStatus } from "../../utils/helpers";
 
 export default function SmartInsights() {
@@ -16,18 +17,19 @@ export default function SmartInsights() {
   useEffect(() => {
     async function load() {
       try {
-        await dashboardService.getSummary();
-        // Build insights from mock data
-        const lowStockItems = mockBatches.filter((b) => getStockStatus(b.quantity, b.minimumStock) === "Low Stock");
-        const expiringBatches = mockBatches.filter((b) => {
+        const [medicines, batches, transactions] = await Promise.all([
+          medicineService.getAll(), batchService.getAll(), dispensingService.getTransactions(),
+        ]);
+        const lowStockItems = batches.filter((b) => getStockStatus(b.quantity, b.minimumStock) === "Low Stock");
+        const expiringBatches = batches.filter((b) => {
           const days = daysUntilExpiry(b.expiryDate);
           const status = getExpiryStatus(days);
           return status === "Near Expiry" || status === "Critical";
         });
-        const expiredCount = mockBatches.filter((b) => daysUntilExpiry(b.expiryDate) <= 0).length;
+        const expiredCount = batches.filter((b) => daysUntilExpiry(b.expiryDate) <= 0).length;
 
-        const totalStock = mockBatches.reduce((s, b) => s + b.quantity, 0);
-        const dispensingThisMonth = mockDispensing.reduce((s, d) => s + d.quantity, 0);
+        const totalStock = batches.reduce((s, b) => s + b.quantity, 0);
+        const dispensingThisMonth = transactions.reduce((s, transaction) => s + transaction.totalQuantity, 0);
 
         const built = [
           {
@@ -81,7 +83,7 @@ export default function SmartInsights() {
             icon: Info,
             color: "slate",
             title: "System Overview",
-            message: `Total inventory value covers ${mockMedicines.length} medicines across ${mockBatches.length} batches. Total stock units: ${totalStock}.`,
+            message: `Total inventory covers ${medicines.length} medicines across ${batches.length} batches. Total stock units: ${totalStock}.`,
             severity: "info",
           },
         ];

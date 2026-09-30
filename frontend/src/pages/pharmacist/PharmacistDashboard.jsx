@@ -11,7 +11,6 @@ import { dashboardService } from "../../services/dashboardService";
 import { dispensingService } from "../../services/dispensingService";
 import { inventoryService } from "../../services/inventoryService";
 import { useAuth } from "../../context/AuthContext";
-import { mockMedicines } from "../../data/mockData";
 import { formatDate, formatNumber } from "../../utils/helpers";
 
 export default function PharmacistDashboard() {
@@ -46,7 +45,7 @@ export default function PharmacistDashboard() {
   if (loading) return <LoadingSpinner size="lg" label="Loading dashboard..." />;
   if (error) return <ErrorState onRetry={() => window.location.reload()} />;
 
-  const activeMeds = mockMedicines.filter((m) => m.status === "active").length;
+  const activeMeds = summary.totalMedicines;
 
   return (
     <div className="space-y-6">
