@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pharmacy.meditrack.enums.MedicineStatus;
 
 import jakarta.persistence.CascadeType;
@@ -18,7 +19,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 @Table(name = "medicines")
@@ -28,17 +31,13 @@ public class Medicine {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "Medicine name is required")
-    @Column(nullable = false)
-    private String name;
+    @NotBlank(message = "Brand name is required")
+    @Column(name = "brand_name", nullable = false)
+    private String brandName;
 
-    @NotBlank(message = "Generic name is required")
-    @Column(nullable = false)
-    private String genericName;
-
-    @NotBlank(message = "Category is required")
-    @Column(nullable = false)
-    private String category;
+    @NotBlank(message = "Generic medicine is required")
+    @Column(name = "generic_medicine", nullable = false)
+    private String genericMedicine;
 
     @NotBlank(message = "Manufacturer is required")
     @Column(nullable = false)
@@ -54,6 +53,11 @@ public class Medicine {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @NotNull(message = "Minimum stock is required")
+    @Min(value = 0, message = "Minimum stock must be 0 or greater")
+    @Column(name = "minimum_stock", nullable = false)
+    private int minimumStock = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -82,28 +86,45 @@ public class Medicine {
         this.id = id;
     }
 
+    public String getBrandName() {
+        return brandName;
+    }
+
+    public void setBrandName(String brandName) {
+        this.brandName = brandName;
+    }
+
+    public String getGenericMedicine() {
+        return genericMedicine;
+    }
+
+    public void setGenericMedicine(String genericMedicine) {
+        this.genericMedicine = genericMedicine;
+    }
+
+    // Compatibility getters & setters for existing modules/JSON
+    @JsonProperty("name")
     public String getName() {
-        return name;
+        return brandName;
     }
 
+    @JsonProperty("name")
     public void setName(String name) {
-        this.name = name;
+        if (this.brandName == null || this.brandName.isBlank()) {
+            this.brandName = name;
+        }
     }
 
+    @JsonProperty("genericName")
     public String getGenericName() {
-        return genericName;
+        return genericMedicine;
     }
 
+    @JsonProperty("genericName")
     public void setGenericName(String genericName) {
-        this.genericName = genericName;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public void setCategory(String category) {
-        this.category = category;
+        if (this.genericMedicine == null || this.genericMedicine.isBlank()) {
+            this.genericMedicine = genericName;
+        }
     }
 
     public String getManufacturer() {
@@ -136,6 +157,14 @@ public class Medicine {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public int getMinimumStock() {
+        return minimumStock;
+    }
+
+    public void setMinimumStock(int minimumStock) {
+        this.minimumStock = minimumStock;
     }
 
     public MedicineStatus getStatus() {

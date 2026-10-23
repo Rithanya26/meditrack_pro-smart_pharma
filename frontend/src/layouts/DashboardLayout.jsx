@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/layout/Sidebar";
 import TopNav from "../components/layout/TopNav";
+import ChatbotWidget from "../components/chatbot/ChatbotWidget";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -17,6 +18,8 @@ export default function DashboardLayout() {
           </div>
         </main>
       </div>
+      {/* Floating MediTrack Chatbot Widget */}
+      <ChatbotWidget />
     </div>
   );
 }

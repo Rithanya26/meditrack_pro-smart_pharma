@@ -3,6 +3,8 @@ package com.pharmacy.meditrack.entity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -54,10 +56,6 @@ public class Batch {
     @Min(value = 0, message = "Quantity must be 0 or greater")
     @Column(nullable = false)
     private int quantity;
-
-    @Min(value = 0, message = "Minimum stock must be 0 or greater")
-    @Column(nullable = false)
-    private int minimumStock;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -134,12 +132,14 @@ public class Batch {
         this.quantity = quantity;
     }
 
+    @JsonProperty("minimumStock")
     public int getMinimumStock() {
-        return minimumStock;
+        return medicine != null ? medicine.getMinimumStock() : 0;
     }
 
+    @JsonProperty("minimumStock")
     public void setMinimumStock(int minimumStock) {
-        this.minimumStock = minimumStock;
+        // Stored at Medicine/Product level
     }
 
     public LocalDateTime getCreatedAt() {

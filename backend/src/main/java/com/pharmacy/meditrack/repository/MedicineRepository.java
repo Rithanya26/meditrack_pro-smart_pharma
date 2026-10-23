@@ -10,9 +10,10 @@ import com.pharmacy.meditrack.enums.MedicineStatus;
 
 public interface MedicineRepository extends JpaRepository<Medicine, Long> {
 
-    Optional<Medicine> findByName(String name);
+    Optional<Medicine> findByBrandName(String brandName);
 
     List<Medicine> findByStatus(MedicineStatus status);
 
-    boolean existsByNameIgnoreCase(String name);
+    boolean existsByBrandNameIgnoreCase(String brandName);
 }
+

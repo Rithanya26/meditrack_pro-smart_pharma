@@ -10,16 +10,20 @@ import {
   ScrollText,
   FileBarChart,
   Lightbulb,
+  ShoppingCart,
+  Truck,
   Settings,
   LogOut,
   HeartPulse,
   X,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { classNames } from "../../utils/helpers";
 
 const adminNav = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/admin/assistant", label: "Chatbot", icon: Sparkles, badge: "AI" },
   { to: "/admin/medicines", label: "Medicines", icon: Pill },
   { to: "/admin/batches", label: "Batches", icon: Package },
   { to: "/admin/inventory", label: "Inventory", icon: Boxes },
@@ -29,11 +33,14 @@ const adminNav = [
   { to: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
   { to: "/admin/reports", label: "Reports", icon: FileBarChart },
   { to: "/admin/insights", label: "Smart Insights", icon: Lightbulb },
+  { to: "/admin/reorder", label: "Auto Reorder", icon: ShoppingCart },
+  { to: "/admin/order-received", label: "Order Received", icon: Truck },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 const pharmacistNav = [
   { to: "/pharmacist/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/pharmacist/assistant", label: "Chatbot", icon: Sparkles, badge: "AI" },
   { to: "/pharmacist/medicines", label: "Medicines", icon: Pill },
   { to: "/pharmacist/dispense", label: "Dispense Medicine", icon: Stethoscope },
   { to: "/pharmacist/expiry-alerts", label: "Expiry Alerts", icon: CalendarClock },
@@ -96,15 +103,22 @@ export default function Sidebar({ open, onClose }) {
                   onClick={onClose}
                   className={({ isActive }) =>
                     classNames(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                      "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       isActive
                         ? "bg-brand-50 text-brand-700"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     )
                   }
                 >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {item.label}
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-xs">
+                      {item.badge}
+                    </span>
+                  )}
                 </NavLink>
               </li>
             ))}

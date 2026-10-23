@@ -60,7 +60,6 @@ public class BatchService {
         existing.setSupplier(updated.getSupplier());
         existing.setReceivedDate(updated.getReceivedDate());
         existing.setQuantity(updated.getQuantity());
-        existing.setMinimumStock(updated.getMinimumStock());
         if (updated.getMedicine() != null) {
             existing.setMedicine(updated.getMedicine());
         }

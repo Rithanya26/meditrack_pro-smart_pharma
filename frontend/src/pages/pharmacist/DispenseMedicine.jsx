@@ -46,7 +46,7 @@ export default function DispenseMedicine() {
     async function load() {
       try {
         const data = await medicineService.getAll();
-        setMedicines(data.filter((m) => m.status === "active"));
+        setMedicines(data.filter((m) => m.status === "active" || m.status === "ACTIVE"));
       } catch {
         toast.error("Unable to load medicines.");
       } finally {
@@ -56,9 +56,20 @@ export default function DispenseMedicine() {
     load();
   }, []);
 
+  // 1. Search Medicine by Brand Name, Generic Medicine, Strength, or Dosage Form
   const filteredMeds = medicines.filter((m) => {
-    const q = search.toLowerCase();
-    return !q || m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q);
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const brandName = (m.brandName || m.name || "").toLowerCase();
+    const generic = (m.genericMedicine || m.genericName || "").toLowerCase();
+    const strength = (m.strength || "").toLowerCase();
+    const dosageForm = (m.dosageForm || "").toLowerCase();
+    return (
+      brandName.includes(q) ||
+      generic.includes(q) ||
+      strength.includes(q) ||
+      dosageForm.includes(q)
+    );
   });
 
   async function selectMedicine(med) {
@@ -118,7 +129,11 @@ export default function DispenseMedicine() {
     if (!validateQuantity()) return;
     const cartItem = {
       medicineId: selectedMed.id,
-      medicineName: selectedMed.name,
+      brandName: selectedMed.brandName || selectedMed.name,
+      medicineName: selectedMed.brandName || selectedMed.name,
+      genericMedicine: selectedMed.genericMedicine || selectedMed.genericName,
+      strength: selectedMed.strength,
+      dosageForm: selectedMed.dosageForm,
       batchId: selectedBatch.id,
       batchNumber: selectedBatch.batchNumber,
       quantity: Number(quantity),
@@ -226,11 +241,13 @@ export default function DispenseMedicine() {
           {step === 0 && (
             <div>
               <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-xl bg-brand-50 flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-7 h-7 text-brand-600" />
+                <div className="w-14 h-14 rounded-xl bg-indigo-50 flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-7 h-7 text-indigo-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-800">Search Medicine</h3>
-                <p className="text-sm text-slate-500">Search by medicine name or generic name</p>
+                <p className="text-sm text-slate-500">
+                  Search by Brand Name, Generic Medicine, Strength, or Dosage Form
+                </p>
               </div>
               <div className="max-w-xl mx-auto relative mb-6">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -238,36 +255,46 @@ export default function DispenseMedicine() {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Type a medicine name..."
+                  placeholder="Search by brand (e.g. Dolo 650), generic (e.g. Paracetamol), strength, or form..."
                   className="input pl-12 py-3 text-base"
                   autoFocus
                 />
               </div>
+
+              {/* 2. Search Results with Distinct Brand Color and Generic Medicine below */}
               {loading ? <LoadingSpinner /> : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl mx-auto">
-                  {filteredMeds.slice(0, 8).map((med) => (
+                  {filteredMeds.map((med) => (
                     <button
                       key={med.id}
                       onClick={() => selectMedicine(med)}
-                      className="flex items-center gap-3 p-4 rounded-lg border border-slate-200 hover:border-brand-300 hover:bg-brand-50/50 transition text-left group"
+                      className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/40 transition text-left group shadow-sm hover:shadow"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center flex-shrink-0">
-                        <Pill className="w-5 h-5 text-brand-600" />
+                      <div className="w-11 h-11 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center flex-shrink-0 transition-colors">
+                        <Pill className="w-6 h-6 text-indigo-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{med.name}</p>
-                        <p className="text-xs text-slate-500">{med.category} · {med.strength}</p>
+                        {/* Distinct visually appealing color for Product / Brand Name */}
+                        <p className="font-bold text-indigo-700 text-base truncate group-hover:text-indigo-800">
+                          {med.brandName || med.name}
+                        </p>
+                        {/* Generic Medicine below each Product/Brand name */}
+                        <p className="text-xs text-slate-600 font-medium mt-0.5 truncate">
+                          {med.genericMedicine || med.genericName} · {med.strength}
+                        </p>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-brand-600 flex-shrink-0" />
+                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 flex-shrink-0 transition-colors" />
                     </button>
                   ))}
                   {filteredMeds.length === 0 && (
                     <div className="col-span-2">
-                      <EmptyState icon={Pill} title="No medicines found" message="Try a different search term." />
+                      <EmptyState icon={Pill} title="No medicines found" message="Try searching by generic name (e.g. Paracetamol), brand name, strength, or form." />
                     </div>
                   )}
                 </div>
               )}
+
+              {/* 4. Current Dispensing */}
               {cart.length > 0 && (
                 <div className="max-w-3xl mx-auto mt-8 border-t border-slate-200 pt-5">
                   <div className="flex items-center justify-between mb-3">
@@ -276,12 +303,16 @@ export default function DispenseMedicine() {
                   </div>
                   <div className="space-y-2">
                     {cart.map((item) => (
-                      <div key={item.medicineId} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+                      <div key={item.medicineId} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3.5 bg-white shadow-sm">
                         <div className="min-w-0">
-                          <p className="font-medium text-slate-800 truncate">{item.medicineName}</p>
-                          <p className="text-xs text-slate-500">Batch {item.batchNumber} · {item.quantity} units · expires {formatDate(item.expiryDate)}</p>
+                          {/* Distinct color for Product/Brand */}
+                          <p className="font-bold text-indigo-700 text-base truncate">{item.medicineName}</p>
+                          {/* Generic Medicine along with selected product details */}
+                          <p className="text-xs text-slate-600 font-medium mt-0.5">
+                            {item.genericMedicine} · Batch {item.batchNumber} · {item.quantity} units · expires {formatDate(item.expiryDate)}
+                          </p>
                         </div>
-                        <button type="button" onClick={() => removeFromCart(item.medicineId)} className="text-danger-600 hover:text-danger-700" title="Remove medicine">
+                        <button type="button" onClick={() => removeFromCart(item.medicineId)} className="text-danger-600 hover:text-danger-700 p-1.5 rounded hover:bg-danger-50 transition" title="Remove medicine">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -299,16 +330,18 @@ export default function DispenseMedicine() {
           {step === 1 && selectedMed && (
             <div className="max-w-2xl mx-auto">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-xl bg-brand-50 flex items-center justify-center">
-                  <Pill className="w-7 h-7 text-brand-600" />
+                <div className="w-14 h-14 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Pill className="w-7 h-7 text-indigo-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-800">{selectedMed.name}</h3>
-                  <p className="text-sm text-slate-500">{selectedMed.genericName} · {selectedMed.strength} · {selectedMed.dosageForm}</p>
+                  <h3 className="text-xl font-bold text-indigo-700">{selectedMed.brandName || selectedMed.name}</h3>
+                  <p className="text-sm text-slate-600 font-medium mt-0.5">
+                    {selectedMed.genericMedicine || selectedMed.genericName} · {selectedMed.strength} · {selectedMed.dosageForm}
+                  </p>
                 </div>
               </div>
               <dl className="grid grid-cols-2 gap-3 mb-6">
-                <div className="p-3 rounded-lg bg-slate-50"><p className="text-xs text-slate-500">Category</p><p className="text-sm font-medium text-slate-700">{selectedMed.category}</p></div>
+                <div className="p-3 rounded-lg bg-slate-50"><p className="text-xs text-slate-500">Generic Medicine</p><p className="text-sm font-medium text-slate-700">{selectedMed.genericMedicine || selectedMed.genericName}</p></div>
                 <div className="p-3 rounded-lg bg-slate-50"><p className="text-xs text-slate-500">Manufacturer</p><p className="text-sm font-medium text-slate-700">{selectedMed.manufacturer}</p></div>
               </dl>
               <div className="flex justify-between">
@@ -321,8 +354,18 @@ export default function DispenseMedicine() {
           {/* Step 2: Select batch (FEFO) */}
           {step === 2 && (
             <div>
+              <div className="mb-4 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-indigo-700 text-base">{selectedMed?.brandName || selectedMed?.name}</p>
+                  <p className="text-xs text-slate-600 font-medium mt-0.5">
+                    {selectedMed?.genericMedicine || selectedMed?.genericName} · {selectedMed?.strength} · {selectedMed?.dosageForm}
+                  </p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => setStep(0)}>Change</Button>
+              </div>
+
               <div className="flex items-center gap-2 mb-4">
-                <Package className="w-5 h-5 text-brand-600" />
+                <Package className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-lg font-semibold text-slate-800">Select Batch</h3>
               </div>
               <div className="p-3 mb-4 rounded-lg bg-brand-50 border border-brand-100 flex items-center gap-2">
@@ -340,9 +383,9 @@ export default function DispenseMedicine() {
                       key={batch.id}
                       className={classNames(
                         "p-4 rounded-lg border transition cursor-pointer",
-                        selectedBatch?.id === batch.id ? "border-brand-500 bg-brand-50/50 ring-2 ring-brand-500/20" :
-                        i === 0 ? "border-success-200 bg-success-50/30 hover:border-brand-300" :
-                        "border-slate-200 hover:border-brand-300"
+                        selectedBatch?.id === batch.id ? "border-indigo-500 bg-indigo-50/50 ring-2 ring-indigo-500/20" :
+                        i === 0 ? "border-success-200 bg-success-50/30 hover:border-indigo-300" :
+                        "border-slate-200 hover:border-indigo-300"
                       )}
                       onClick={() => selectBatch(batch)}
                     >
@@ -391,8 +434,12 @@ export default function DispenseMedicine() {
               </div>
               <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-slate-500">Medicine</span>
-                  <span className="text-sm font-medium text-slate-800">{selectedMed.name}</span>
+                  <span className="text-sm text-slate-500">Product / Brand</span>
+                  <span className="text-sm font-bold text-indigo-700">{selectedMed.brandName || selectedMed.name}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-slate-500">Generic Medicine</span>
+                  <span className="text-sm font-medium text-slate-700">{selectedMed.genericMedicine || selectedMed.genericName} · {selectedMed.strength}</span>
                 </div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-slate-500">Batch</span>
@@ -404,7 +451,7 @@ export default function DispenseMedicine() {
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                   <span className="text-sm text-slate-600 font-medium">Available Stock</span>
-                  <span className="text-lg font-bold text-brand-700">{selectedBatch.quantity}</span>
+                  <span className="text-lg font-bold text-indigo-700">{selectedBatch.quantity}</span>
                 </div>
               </div>
               <Input
@@ -493,31 +540,50 @@ export default function DispenseMedicine() {
             </div>
           )}
 
-          {/* Step 4: Review */}
+          {/* Step 4: Finalize Dispensing */}
           {step === 4 && cart.length > 0 && (
             <div className="max-w-lg mx-auto">
               <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-xl bg-brand-50 flex items-center justify-center mx-auto mb-3">
-                  <Stethoscope className="w-7 h-7 text-brand-600" />
+                <div className="w-14 h-14 rounded-xl bg-indigo-50 flex items-center justify-center mx-auto mb-3">
+                  <Stethoscope className="w-7 h-7 text-indigo-600" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-800">Finalize Dispensing</h3>
                 <p className="text-sm text-slate-500">Enter customer details before confirming the complete transaction</p>
               </div>
+
+              {/* Customer Details Inputs (Unchanged) */}
               <div className="grid gap-3 mb-5">
                 <Input label="Customer / Patient Name *" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Full name" />
                 <Input label="Phone Number *" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Phone number" />
                 <Input label="Patient / Customer ID" value={patientId} onChange={(e) => setPatientId(e.target.value)} placeholder="Optional" />
                 <Input label="Prescription / Reference Number" value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} placeholder="Optional" />
               </div>
+
               {finalizeError && <div className="mb-4 rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700">{finalizeError}</div>}
+
+              {/* 5. Selected Medicine Details with Distinct Brand Color, Generic Medicine, and Dosage Form */}
+              <div className="space-y-2.5 mb-5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Selected Medicine Details</p>
+                {cart.map((item) => (
+                  <div key={item.medicineId} className="p-3.5 rounded-lg bg-slate-50 border border-slate-200">
+                    <p className="font-bold text-indigo-700 text-base">{item.medicineName}</p>
+                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                      {item.genericMedicine} · {item.strength} · {item.dosageForm}
+                    </p>
+                    <p className="text-xs text-slate-800 font-semibold mt-1">
+                      {item.quantity} units · {item.batchNumber}
+                      {item.expiryRisk?.conflict && (
+                        <span className="text-danger-600 font-medium ml-2">({item.expiryRisk.riskLevel} EXPIRY RISK)</span>
+                      )}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total units, Pharmacist, Date, Time (Unchanged) */}
               <div className="space-y-2 mb-6">
                 {[
-                  { label: "Medicines", value: `${cart.length} selected` },
                   { label: "Total Units", value: cart.reduce((sum, item) => sum + item.quantity, 0) },
-                  ...cart.map((item) => ({
-                    label: item.medicineName,
-                    value: `${item.quantity} units · ${item.batchNumber}${item.expiryRisk?.conflict ? ` · ${item.expiryRisk.riskLevel} EXPIRY RISK` : ""}`,
-                  })),
                   { label: "Pharmacist", value: user.name },
                   { label: "Date", value: formatDate(new Date().toISOString()) },
                   { label: "Time", value: formatTime(new Date().toISOString()) },
@@ -528,6 +594,8 @@ export default function DispenseMedicine() {
                   </div>
                 ))}
               </div>
+
+              {/* Back and Confirm Dispensing (Unchanged) */}
               <div className="flex justify-between">
                 <Button variant="secondary" onClick={() => setStep(0)}><ArrowLeft className="w-4 h-4" /> Back</Button>
                 <Button onClick={confirmDispensing} loading={dispensing}>Confirm Dispensing <CheckCircle className="w-4 h-4" /></Button>
@@ -572,8 +640,11 @@ export default function DispenseMedicine() {
                 ))}
                 <div className="mt-3 border-t border-slate-200 pt-3">
                   {receipt.items.map((item) => (
-                    <div key={item.itemId || `${item.medicineId}-${item.batchId}`} className="flex items-center justify-between py-2 text-sm">
-                      <span className="text-slate-600">{item.medicineName} <span className="text-xs text-slate-400">({item.batchNumber})</span></span>
+                    <div key={item.itemId || `${item.medicineId}-${item.batchId}`} className="flex items-center justify-between py-2 text-sm border-b border-slate-50 last:border-0">
+                      <div>
+                        <span className="font-bold text-indigo-700">{item.medicineName}</span>
+                        <span className="text-xs text-slate-500 ml-2">({item.batchNumber})</span>
+                      </div>
                       <span className="font-semibold text-slate-800">{item.quantity} units</span>
                     </div>
                   ))}

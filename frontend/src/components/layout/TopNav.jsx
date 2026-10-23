@@ -12,8 +12,11 @@ import {
   User,
   LogOut,
   Settings,
+  Sparkles,
+  Bot,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useChatbot } from "../../context/ChatbotContext";
 import { mockNotifications } from "../../data/mockData";
 import { formatDateTime, classNames } from "../../utils/helpers";
 
@@ -28,12 +31,16 @@ const pageTitles = {
   "/admin/audit-logs": "Audit Logs",
   "/admin/reports": "Reports",
   "/admin/insights": "Smart Insights",
+  "/admin/reorder": "Auto Reorder",
+  "/admin/order-received": "Order Received",
   "/admin/settings": "Settings",
+  "/admin/assistant": "Chatbot",
   "/pharmacist/dashboard": "Pharmacist Dashboard",
   "/pharmacist/medicines": "Medicines",
   "/pharmacist/dispense": "Dispense Medicine",
   "/pharmacist/expiry-alerts": "Expiry Alerts",
   "/pharmacist/history": "Dispensing History",
+  "/pharmacist/assistant": "Chatbot",
 };
 
 const notifIcons = {
@@ -48,6 +55,7 @@ export default function TopNav({ onMenuClick }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { toggleChatbot, isOpen: isChatOpen } = useChatbot();
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const notifRef = useRef(null);
@@ -85,15 +93,30 @@ export default function TopNav({ onMenuClick }) {
           <h2 className="text-lg font-semibold text-slate-800">{pageTitle}</h2>
         </div>
 
-        {/* Right: search, notifications, profile */}
+        {/* Right: search, Chatbot, notifications, profile */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Chatbot Quick Trigger */}
+          <button
+            onClick={toggleChatbot}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+              isChatOpen
+                ? "bg-brand-50 text-brand-700 border-brand-200 shadow-sm"
+                : "bg-gradient-to-r from-brand-50 to-indigo-50 text-brand-700 border-brand-200 hover:border-brand-300 hover:shadow-sm"
+            }`}
+            title="Toggle MediTrack Chatbot"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-brand-600 animate-pulse" />
+            <span className="hidden sm:inline">Chatbot</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          </button>
+
           {/* Search — hidden on small screens */}
           <div className="hidden md:block relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               placeholder="Search..."
-              className="w-48 lg:w-64 pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:bg-white transition"
+              className="w-44 lg:w-56 pl-10 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:bg-white transition"
             />
           </div>
 

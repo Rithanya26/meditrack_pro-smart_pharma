@@ -13,7 +13,7 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 import { medicineService } from "../../services/medicineService";
 import { batchService } from "../../services/batchService";
 import { daysUntilExpiry, formatDate, formatNumber } from "../../utils/helpers";
-import { CATEGORIES } from "../../data/mockData";
+import { DOSAGE_FORMS } from "../../data/mockData";
 
 export default function PharmacistMedicines() {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export default function PharmacistMedicines() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [formFilter, setFormFilter] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -41,12 +41,25 @@ export default function PharmacistMedicines() {
 
   const filtered = useMemo(() => {
     return medicines.filter((m) => {
-      const q = search.toLowerCase();
-      const matchSearch = !q || m.name.toLowerCase().includes(q) || m.genericName.toLowerCase().includes(q);
-      const matchCat = !categoryFilter || m.category === categoryFilter;
-      return matchSearch && matchCat;
+      const q = search.trim().toLowerCase();
+      const brandName = (m.brandName || m.name || "").toLowerCase();
+      const genericMed = (m.genericMedicine || m.genericName || "").toLowerCase();
+      const manufacturer = (m.manufacturer || "").toLowerCase();
+      const strength = (m.strength || "").toLowerCase();
+      const dosageForm = (m.dosageForm || "").toLowerCase();
+
+      const matchSearch =
+        !q ||
+        brandName.includes(q) ||
+        genericMed.includes(q) ||
+        manufacturer.includes(q) ||
+        strength.includes(q) ||
+        dosageForm.includes(q);
+
+      const matchForm = !formFilter || m.dosageForm === formFilter;
+      return matchSearch && matchForm;
     });
-  }, [medicines, search, categoryFilter]);
+  }, [medicines, search, formFilter]);
 
   function getMedStats(medId) {
     const medBatches = batches.filter((b) => b.medicineId === medId);
@@ -67,10 +80,18 @@ export default function PharmacistMedicines() {
 
       <Card className="mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <SearchInput value={search} onChange={setSearch} placeholder="Search by name or generic name..." />
-          <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-            <option value="">All Categories</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by brand, generic, manufacturer, strength, form..."
+          />
+          <Select value={formFilter} onChange={(e) => setFormFilter(e.target.value)}>
+            <option value="">All Dosage Forms</option>
+            {DOSAGE_FORMS.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
           </Select>
         </div>
       </Card>
@@ -88,8 +109,13 @@ export default function PharmacistMedicines() {
                     <Pill className="w-6 h-6 text-brand-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-800 truncate">{med.name}</h3>
-                    <p className="text-xs text-slate-500">{med.genericName} · {med.strength}</p>
+                    <h3 className="font-bold text-slate-900 text-base truncate">{med.brandName || med.name}</h3>
+                    <p className="text-xs font-medium text-slate-600 mt-0.5">
+                      {(med.genericMedicine || med.genericName)} · {med.strength} · {med.dosageForm}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                      Manufacturer: {med.manufacturer}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2 mb-4">

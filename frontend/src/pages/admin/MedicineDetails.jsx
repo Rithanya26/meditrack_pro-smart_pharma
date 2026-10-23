@@ -43,23 +43,45 @@ export default function MedicineDetails() {
   if (loading) return <LoadingSpinner size="lg" />;
   if (error || !medicine) return <ErrorState message="Medicine not found." onRetry={() => navigate("/admin/medicines")} />;
 
+  const usableStock = batches
+    .filter((b) => getExpiryStatus(daysUntilExpiry(b.expiryDate)) !== "Expired")
+    .reduce((sum, b) => sum + b.quantity, 0);
   const totalStock = batches.reduce((sum, b) => sum + b.quantity, 0);
-  const activeBatches = batches.filter((b) => b.quantity > 0 && getExpiryStatus(daysUntilExpiry(b.expiryDate)) !== "Expired").length;
-  const earliestExpiry = batches.length > 0 ? batches.reduce((min, b) => new Date(b.expiryDate) < new Date(min) ? b.expiryDate : min, batches[0].expiryDate) : null;
+  const activeBatches = batches.filter(
+    (b) => b.quantity > 0 && getExpiryStatus(daysUntilExpiry(b.expiryDate)) !== "Expired"
+  ).length;
+  const earliestExpiry =
+    batches.length > 0
+      ? batches.reduce(
+          (min, b) => (new Date(b.expiryDate) < new Date(min) ? b.expiryDate : min),
+          batches[0].expiryDate
+        )
+      : null;
 
   const infoItems = [
-    { label: "Generic Name", value: medicine.genericName },
-    { label: "Category", value: medicine.category },
+    { label: "Brand Name", value: medicine.brandName || medicine.name },
+    { label: "Generic Medicine", value: medicine.genericMedicine || medicine.genericName },
     { label: "Manufacturer", value: medicine.manufacturer },
     { label: "Strength", value: medicine.strength },
     { label: "Dosage Form", value: medicine.dosageForm },
+    { label: "Minimum Stock", value: medicine.minimumStock ?? 0 },
     { label: "Status", value: <StatusBadge status={medicine.status} type="active" /> },
   ];
 
   const summaryCards = [
-    { label: "Total Stock", value: formatNumber(totalStock), icon: Boxes, color: "blue" },
+    {
+      label: "Usable Stock",
+      value: `${formatNumber(usableStock)} units`,
+      icon: Boxes,
+      color: usableStock <= (medicine.minimumStock ?? 0) ? "orange" : "blue",
+    },
     { label: "Active Batches", value: activeBatches, icon: Package, color: "green" },
-    { label: "Earliest Expiry", value: earliestExpiry ? formatDate(earliestExpiry) : "—", icon: CalendarClock, color: earliestExpiry ? "yellow" : "slate" },
+    {
+      label: "Earliest Expiry",
+      value: earliestExpiry ? formatDate(earliestExpiry) : "—",
+      icon: CalendarClock,
+      color: earliestExpiry ? "yellow" : "slate",
+    },
   ];
 
   const batchColumns = [
@@ -93,8 +115,12 @@ export default function MedicineDetails() {
             <Pill className="w-7 h-7 text-brand-600" />
           </div>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-800">{medicine.name}</h1>
-            <p className="text-sm text-slate-500">{medicine.description}</p>
+            <h1 className="text-xl font-bold text-slate-800">{medicine.brandName || medicine.name}</h1>
+            <p className="text-sm font-medium text-slate-600 mt-0.5">
+              {(medicine.genericMedicine || medicine.genericName)} · {medicine.strength} · {medicine.dosageForm}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">Manufacturer: {medicine.manufacturer}</p>
+            {medicine.description && <p className="text-sm text-slate-500 mt-2">{medicine.description}</p>}
           </div>
           <StatusBadge status={medicine.status} type="active" />
         </div>

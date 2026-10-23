@@ -35,8 +35,8 @@ public class MedicineService {
     }
 
     public Medicine create(Medicine medicine) {
-        if (medicineRepository.existsByNameIgnoreCase(medicine.getName())) {
-            throw new BadRequestException("A medicine with this name already exists.");
+        if (medicineRepository.existsByBrandNameIgnoreCase(medicine.getBrandName())) {
+            throw new BadRequestException("A medicine with this brand name already exists.");
         }
         medicine.setStatus(MedicineStatus.ACTIVE);
         return medicineRepository.save(medicine);
@@ -45,17 +45,17 @@ public class MedicineService {
     @Transactional
     public Medicine update(Long id, Medicine updated) {
         Medicine existing = getById(id);
-        if (!existing.getName().equalsIgnoreCase(updated.getName())
-                && medicineRepository.existsByNameIgnoreCase(updated.getName())) {
-            throw new BadRequestException("A medicine with this name already exists.");
+        if (!existing.getBrandName().equalsIgnoreCase(updated.getBrandName())
+                && medicineRepository.existsByBrandNameIgnoreCase(updated.getBrandName())) {
+            throw new BadRequestException("A medicine with this brand name already exists.");
         }
-        existing.setName(updated.getName());
-        existing.setGenericName(updated.getGenericName());
-        existing.setCategory(updated.getCategory());
+        existing.setBrandName(updated.getBrandName());
+        existing.setGenericMedicine(updated.getGenericMedicine());
         existing.setManufacturer(updated.getManufacturer());
         existing.setStrength(updated.getStrength());
         existing.setDosageForm(updated.getDosageForm());
         existing.setDescription(updated.getDescription());
+        existing.setMinimumStock(updated.getMinimumStock());
         existing.setStatus(updated.getStatus());
         return medicineRepository.save(existing);
     }

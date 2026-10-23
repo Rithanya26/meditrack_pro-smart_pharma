@@ -128,9 +128,14 @@ public class DispensingService {
         transaction.getItems().forEach(item -> {
             if (item.getMedicine() != null) {
                 item.getMedicine().getName();
+                item.getMedicine().getBrandName();
+                item.getMedicine().getGenericMedicine();
+                item.getMedicine().getStrength();
+                item.getMedicine().getDosageForm();
             }
             if (item.getBatch() != null) {
                 item.getBatch().getBatchNumber();
+                item.getBatch().getExpiryDate();
             }
         });
     }
