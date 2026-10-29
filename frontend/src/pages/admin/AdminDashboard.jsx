@@ -57,6 +57,10 @@ export default function AdminDashboard() {
   if (loading) return <LoadingSpinner size="lg" label="Loading dashboard..." />;
   if (error) return <ErrorState onRetry={() => window.location.reload()} />;
 
+  const monthlyDispensing = chartData.monthlyDispensing;
+  const currentMonthDispensing = monthlyDispensing[monthlyDispensing.length - 1];
+  const hasMonthlyActivity = monthlyDispensing.some((month) => month.quantity > 0);
+
   return (
     <div className="space-y-6">
       {/* Summary cards */}
@@ -75,29 +79,67 @@ export default function AdminDashboard() {
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-semibold text-slate-800">Monthly Dispensing Trend</h3>
-              <p className="text-sm text-slate-500">Units dispensed over the last 12 months</p>
+              <h3 className="text-base font-bold text-slate-900">Units dispensed by month</h3>
+              <p className="text-sm text-slate-600">Monthly totals for the last 12 months</p>
             </div>
-            <TrendingUp className="w-5 h-5 text-success-500" />
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-right">
+              <TrendingUp className="w-4 h-4 text-emerald-800" />
+              <div>
+                <p className="text-xs font-medium text-emerald-900">{currentMonthDispensing.month}</p>
+                <p className="text-sm font-bold text-emerald-950">
+                  {formatNumber(currentMonthDispensing.quantity)} units
+                </p>
+              </div>
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData.monthlyDispensing}>
-              <defs>
-                <linearGradient id="colorDisp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2487eb" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#2487eb" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }}
-                labelStyle={{ color: "#0f172a", fontWeight: 600 }}
-              />
-              <Area type="monotone" dataKey="quantity" stroke="#2487eb" strokeWidth={2} fill="url(#colorDisp)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          {hasMonthlyActivity ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={monthlyDispensing} margin={{ top: 12, right: 12, left: 4, bottom: 4 }}>
+                <defs>
+                  <linearGradient id="dispensingArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0f766e" stopOpacity={0.34} />
+                    <stop offset="100%" stopColor="#0f766e" stopOpacity={0.04} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="4 4" stroke="#dbe4e8" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fontSize: 12, fill: "#475569", fontWeight: 600 }}
+                  axisLine={{ stroke: "#94a3b8" }}
+                  tickLine={false}
+                  minTickGap={12}
+                />
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#475569" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={52}
+                  tickFormatter={(value) => formatNumber(value)}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                  labelStyle={{ color: "#0f172a", fontWeight: 700 }}
+                  formatter={(value) => [`${formatNumber(value)} units`, "Dispensed"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="quantity"
+                  name="Units dispensed"
+                  stroke="#0f766e"
+                  strokeWidth={3}
+                  fill="url(#dispensingArea)"
+                  activeDot={{ r: 6, fill: "#0f766e", stroke: "#ffffff", strokeWidth: 2 }}
+                  dot={{ r: 3, fill: "#0f766e", stroke: "#ffffff", strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[300px] flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center">
+              <p className="text-sm font-semibold text-slate-700">No dispensing activity yet</p>
+              <p className="mt-1 text-sm text-slate-600">Monthly totals will appear here when medicines are dispensed.</p>
+            </div>
+          )}
         </Card>
 
         {/* Inventory by category */}

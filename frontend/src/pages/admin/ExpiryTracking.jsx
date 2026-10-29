@@ -79,9 +79,9 @@ export default function ExpiryTracking() {
   }, [items]);
 
   const columns = [
-    { key: "medicine", header: "Medicine", render: (i) => <span className="font-medium text-slate-800">{i.medicine?.name}</span> },
-    { key: "batchNumber", header: "Batch", render: (i) => <span className="font-mono text-xs text-slate-600">{i.batchNumber}</span> },
-    { key: "quantity", header: "Quantity", render: (i) => <span className="font-semibold text-slate-700">{i.quantity}</span> },
+    { key: "medicine", header: "Medicine", render: (i) => <span className="font-bold text-slate-900">{i.medicine?.name}</span> },
+    { key: "batchNumber", header: "Batch", render: (i) => <span className="font-mono text-xs font-bold text-slate-800">{i.batchNumber}</span> },
+    { key: "quantity", header: "Quantity", render: (i) => <span className="font-bold text-slate-900">{i.quantity}</span> },
     { key: "expiryDate", header: "Expiry Date", render: (i) => formatDate(i.expiryDate) },
     { key: "daysRemaining", header: "Days Remaining", render: (i) => (
       <span className={i.daysRemaining <= 0 ? "text-danger-600 font-semibold" : i.daysRemaining <= 30 ? "text-orange-600 font-semibold" : "text-slate-600"}>
@@ -109,14 +109,14 @@ export default function ExpiryTracking() {
 
       {/* Timeline */}
       <Card className="mb-6">
-        <h3 className="text-base font-semibold text-slate-800 mb-1">Expiry Timeline</h3>
-        <p className="text-sm text-slate-500 mb-4">Distribution of batches by time remaining</p>
+        <h3 className="text-base font-extrabold text-slate-900 mb-1">Expiry Timeline</h3>
+        <p className="text-sm font-semibold text-slate-700 mb-4">Distribution of batches by time remaining</p>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={timelineData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="range" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px" }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" vertical={false} />
+            <XAxis dataKey="range" tick={{ fontSize: 13, fill: "#0f172a", fontWeight: 700 }} axisLine={{ stroke: "#475569" }} tickLine={false} />
+            <YAxis tick={{ fontSize: 13, fill: "#0f172a", fontWeight: 700 }} axisLine={{ stroke: "#475569" }} tickLine={false} allowDecimals={false} />
+            <Tooltip contentStyle={{ borderRadius: "8px", border: "2px solid #475569", fontSize: "13px", fontWeight: 600 }} />
             <Bar dataKey="count" radius={[6, 6, 0, 0]}>
               {timelineData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
             </Bar>

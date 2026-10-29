@@ -3,12 +3,12 @@ import { classNames } from "../../utils/helpers";
 
 export default function StatCard({ icon: Icon, label, value, trend, trendLabel, color = "blue" }) {
   const colorClasses = {
-    blue: "bg-brand-50 text-brand-600",
-    green: "bg-success-50 text-success-600",
-    yellow: "bg-warning-50 text-warning-600",
-    orange: "bg-orange-50 text-orange-600",
-    red: "bg-danger-50 text-danger-600",
-    purple: "bg-purple-50 text-purple-600",
+    blue: "bg-brand-100 text-brand-600",
+    green: "bg-emerald-100 text-emerald-600",
+    yellow: "bg-amber-100 text-amber-600",
+    orange: "bg-orange-100 text-orange-600",
+    red: "bg-red-100 text-red-600",
+    purple: "bg-purple-100 text-purple-600",
   };
 
   const trendUp = trend && trend > 0;
@@ -22,7 +22,7 @@ export default function StatCard({ icon: Icon, label, value, trend, trendLabel, 
           {trendLabel && (
             <div className="mt-2 flex items-center gap-1 text-xs">
               {trend !== undefined && (
-                <span className={classNames("flex items-center gap-0.5 font-medium", trendUp ? "text-success-600" : "text-danger-600")}>
+                <span className={classNames("flex items-center gap-0.5 font-medium", trendUp ? "text-emerald-600" : "text-red-600")}>
                   {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                   {Math.abs(trend)}
                 </span>

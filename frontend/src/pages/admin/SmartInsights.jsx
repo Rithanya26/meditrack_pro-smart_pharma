@@ -280,10 +280,6 @@ export default function SmartInsights() {
                       <span className="font-semibold text-slate-800">{prod.historicalMonths} months</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">7-Day Forecast</span>
-                      <span className="font-bold text-indigo-600">{prod.forecast7d} units</span>
-                    </div>
-                    <div className="flex justify-between">
                       <span className="text-slate-500">30-Day Forecast</span>
                       <span className="font-bold text-indigo-700">{prod.forecast30d} units</span>
                     </div>
@@ -345,12 +341,8 @@ export default function SmartInsights() {
             </div>
           </div>
 
-          {/* 4 Metrics Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="p-4 text-center">
-              <p className="text-xs text-slate-500 font-medium">7-Day Forecast</p>
-              <p className="text-2xl font-bold text-indigo-600 mt-1">{selectedProduct.forecast7d} units</p>
-            </Card>
+          {/* 3 Metrics Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="p-4 text-center">
               <p className="text-xs text-slate-500 font-medium">30-Day Forecast</p>
               <p className="text-2xl font-bold text-indigo-700 mt-1">{selectedProduct.forecast30d} units</p>
@@ -460,10 +452,6 @@ export default function SmartInsights() {
                 <span className="font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
                   {selectedProduct.forecastAccuracy}%
                 </span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-slate-50">
-                <span className="text-slate-500">7-Day Forecast</span>
-                <span className="font-semibold text-slate-800">{selectedProduct.forecast7d} units</span>
               </div>
               <div className="flex justify-between py-1.5 border-b border-slate-50">
                 <span className="text-slate-500">30-Day Forecast</span>

@@ -24,6 +24,7 @@ import {
 import { useChatbot } from "../../context/ChatbotContext";
 import { useAuth } from "../../context/AuthContext";
 import ChatbotSettingsModal from "./ChatbotSettingsModal";
+import FormattedMessage from "./FormattedMessage";
 
 export default function ChatbotWidget() {
   const {
@@ -111,114 +112,37 @@ export default function ChatbotWidget() {
     }
   };
 
-  // Role-specific suggested prompts covering clinical, how-to, and inventory queries
+  // Role-specific suggested prompts covering clinical, FEFO, and inventory queries
   const pharmacistPrompts = [
-    "📦 Show order received awaiting medicine",
-    "💊 How to dispense medicine?",
-    "🏷️ What is FEFO?",
+    "⚠️ List expired medicines",
+    "🛒 Auto reorder status & suggestions",
+    "🏷️ FEFO batch for Paracetamol",
     "🏷️ FEFO batch for Dolo 650",
+    "⏳ Batches expiring in 30 days",
+    "📦 Show low stock medicines",
     "⚠️ Ibuprofen + Warfarin interaction",
     "🚨 Dispense Dolo 650 for 45 days check",
-    "💊 Tell me about Amoxicillin",
-    "📷 How to scan barcode?",
-    "⏳ Batches expiring in 30 days",
+    "💊 How to dispense medicine?",
+    "🏷️ What is FEFO?",
     "🛡️ Difference between Admin and Pharmacist",
+    "📦 Show order received awaiting medicine",
   ];
 
   const adminPrompts = [
-    "📦 Show order received awaiting medicine",
+    "⚠️ List expired medicines",
+    "🛒 Auto reorder status & suggestions",
+    "🏷️ FEFO batch for Paracetamol",
+    "📦 Show low stock medicines",
+    "⏳ Batches expiring in 30 days",
+    "📊 Explain demand forecasting formula",
     "➕ How to add a medicine?",
     "🏷️ How to add a batch?",
-    "📦 Show low stock medicines",
-    "⏳ Which batches expire this month?",
-    "⚖️ How to record damaged stock?",
-    "📄 How to export reports?",
-    "📊 Explain Croston-SBA forecasting",
     "🏷️ List all batches",
-    "🛡️ Admin vs Pharmacist roles",
+    "🛡️ Difference between Admin and Pharmacist",
+    "📦 Show order received awaiting medicine",
   ];
 
-  const suggestedPrompts = user?.role === "admin" ? adminPrompts : pharmacistPrompts;
-
-  // Simple Markdown renderer
-  const renderFormattedText = (text) => {
-    if (!text) return null;
-    const lines = text.split("\n");
-
-    return (
-      <div className="space-y-1.5 text-xs leading-relaxed text-slate-700">
-        {lines.map((line, idx) => {
-          if (!line.trim()) {
-            return <div key={idx} className="h-1.5" />;
-          }
-
-          // Headers
-          if (line.startsWith("### ")) {
-            return (
-              <h4 key={idx} className="font-bold text-slate-900 text-xs mt-2 mb-1">
-                {line.replace("### ", "")}
-              </h4>
-            );
-          }
-          if (line.startsWith("## ") || line.startsWith("# ")) {
-            return (
-              <h3 key={idx} className="font-bold text-slate-900 text-sm mt-2 mb-1 border-b border-slate-100 pb-1">
-                {line.replace(/^#+\s/, "")}
-              </h3>
-            );
-          }
-
-          // Blockquote
-          if (line.startsWith("> ")) {
-            return (
-              <div
-                key={idx}
-                className="pl-2.5 py-1 my-1 border-l-2 border-brand-500 bg-brand-50/50 rounded-r text-[11px] text-slate-600 italic"
-              >
-                {line.replace("> ", "")}
-              </div>
-            );
-          }
-
-          // Bullet point
-          if (line.startsWith("• ") || line.startsWith("- ") || line.startsWith("* ")) {
-            const content = line.replace(/^[•\-*]\s+/, "");
-            return (
-              <div key={idx} className="flex items-start gap-1.5 ml-1">
-                <span className="text-brand-500 font-bold leading-none mt-1">•</span>
-                <span className="flex-1" dangerouslySetInnerHTML={{ __html: formatInline(content) }} />
-              </div>
-            );
-          }
-
-          // Numbered list
-          const numMatch = line.match(/^(\d+)\.\s+(.*)/);
-          if (numMatch) {
-            return (
-              <div key={idx} className="flex items-start gap-1.5 ml-1">
-                <span className="text-brand-600 font-semibold text-[11px]">{numMatch[1]}.</span>
-                <span className="flex-1" dangerouslySetInnerHTML={{ __html: formatInline(numMatch[2]) }} />
-              </div>
-            );
-          }
-
-          return (
-            <p key={idx} dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
-          );
-        })}
-      </div>
-    );
-  };
-
-  const formatInline = (str) => {
-    return str
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, "<strong class='font-semibold text-slate-900'>$1</strong>")
-      // Code / badges
-      .replace(/`([^`]+)`/g, "<code class='px-1.5 py-0.5 rounded bg-slate-100 text-brand-700 font-mono text-[10.5px] border border-slate-200/80'>$1</code>")
-      // Italics
-      .replace(/\*([^*]+)\*/g, "<em class='italic text-slate-600'>$1</em>");
-  };
+  const suggestedPrompts = user?.role?.toLowerCase() === "admin" ? adminPrompts : pharmacistPrompts;
 
   return (
     <>
@@ -372,9 +296,9 @@ export default function ChatbotWidget() {
                   >
                     {/* Message Body */}
                     {isUser ? (
-                      <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                      <p className="whitespace-pre-wrap leading-relaxed text-xs sm:text-[13px]">{msg.text}</p>
                     ) : (
-                      <div>{renderFormattedText(msg.text)}</div>
+                      <FormattedMessage text={msg.text} />
                     )}
 
                     {/* Action buttons embedded in assistant response */}

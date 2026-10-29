@@ -17,7 +17,7 @@
 body {
   margin: 0;
   background-color: #f1f5f9;
-  color: #0f172a;
+  color: #1e293b;
   min-height: 100vh;
 }
 
@@ -27,15 +27,15 @@ body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
@@ -43,13 +43,13 @@ body {
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl shadow-card border border-slate-200/60;
+    @apply bg-white rounded-xl shadow-card border border-slate-200;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm;
   }
   .btn-secondary {
     @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50;
@@ -58,12 +58,65 @@ body {
     @apply btn bg-danger-600 text-white hover:bg-danger-700;
   }
   .input {
-    @apply w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition;
+    @apply w-full px-3 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition;
   }
   .label {
-    @apply block text-sm font-medium text-slate-700 mb-1.5;
+    @apply block text-sm font-semibold text-slate-700 mb-1.5;
   }
   .badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   XEROX / PRINT — HIGH CONTRAST OVERRIDES
+   Ensures clear visibility when screenshots are photocopied
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Force light gray text to darker for print clarity */
+.text-slate-400 { color: #64748b !important; }
+.text-slate-500 { color: #475569 !important; }
+
+/* Table contrast */
+table thead tr {
+  background-color: #f8fafc !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+table thead th {
+  font-weight: 700 !important;
+  color: #334155 !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.05em !important;
+}
+table tbody tr {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+table tbody td {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+/* Inputs for print */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+select,
+textarea {
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+/* Print media */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body { background: #fff !important; color: #000 !important; }
+  .card { border: 2px solid #333 !important; box-shadow: none !important; }
+  table thead th { color: #000 !important; font-weight: 800 !important; }
+  table tbody td { color: #000 !important; }
 }

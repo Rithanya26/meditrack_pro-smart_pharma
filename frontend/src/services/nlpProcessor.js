@@ -91,13 +91,13 @@ const INTENT_DEFINITIONS = {
       "expiry", "expiring", "expire", "expires", "expired", "perish",
       "perishability", "horizon", "shelf-life", "shelflife", "outdated"
     ],
-    phrases: ["near expiry", "expiring soon", "critical batches", "expired stock", "expiry radar", "expiry horizon"],
+    phrases: ["near expiry", "expiring soon", "critical batches", "expired stock", "expiry radar", "expiry horizon", "list expired medicines", "show expired medicines", "expired medicines", "list expired", "show expired"],
   },
   EXPIRED_ACTION: {
     name: "EXPIRED_ACTION",
     weight: 1.15,
     keywords: ["quarantine", "disposal", "discard", "writeoff", "condemned", "isolate", "destroy"],
-    phrases: ["what to do with expired", "handle expired", "dispose expired", "expired medicines disposal", "quarantine protocol"],
+    phrases: ["what to do with expired", "handle expired", "dispose expired", "expired medicines disposal", "quarantine protocol", "list expired medicines", "show expired medicines", "expired medicines"],
   },
   STOCK_INQUIRY: {
     name: "STOCK_INQUIRY",
@@ -237,7 +237,7 @@ const INTENT_DEFINITIONS = {
       "croston", "forecast", "forecasting", "sba", "syntetos", "boylan",
       "intermittent", "wape", "smoothing", "lumpy", "mathematical"
     ],
-    phrases: ["demand forecast", "croston's method", "croston sba", "demand model", "how does forecasting work"],
+    phrases: ["demand forecast", "croston's method", "croston sba", "demand model", "how does forecasting work", "explain demand forecasting formula", "demand forecasting formula", "explain croston-sba forecasting", "forecasting formula", "forecast formula"],
   },
   SAFETY_STOCK_LEAD_TIME: {
     name: "SAFETY_STOCK_LEAD_TIME",
@@ -262,7 +262,7 @@ const INTENT_DEFINITIONS = {
     name: "REORDER_PROCUREMENT",
     weight: 1.0,
     keywords: ["reorder", "procure", "procurement", "purchase", "replenish"],
-    phrases: ["auto reorder", "purchase order", "reorder suggestions", "generate po", "how auto reorder works"],
+    phrases: ["auto reorder", "purchase order", "reorder suggestions", "generate po", "how auto reorder works", "auto reorder status", "auto reorder status & suggestions", "reorder status"],
   },
   CLINICAL_MONOGRAPH: {
     name: "CLINICAL_MONOGRAPH",

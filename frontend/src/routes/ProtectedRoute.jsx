@@ -14,8 +14,12 @@ export function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  if (allowedRoles) {
+    const userRole = user?.role?.toLowerCase();
+    const normalizedAllowed = allowedRoles.map((r) => r.toLowerCase());
+    if (!userRole || !normalizedAllowed.includes(userRole)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   return children;
@@ -26,5 +30,5 @@ export function AdminRoute({ children }) {
 }
 
 export function PharmacistRoute({ children }) {
-  return <ProtectedRoute allowedRoles={["pharmacist"]}>{children}</ProtectedRoute>;
+  return <ProtectedRoute allowedRoles={["pharmacist", "admin"]}>{children}</ProtectedRoute>;
 }

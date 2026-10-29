@@ -273,7 +273,6 @@ To ensure regulatory compliance and strict separation of administrative oversigh
 - **Dual-Level Selection:** Analyze forecasting at the *Generic Class* level or drill down to individual *Brand Name Formulations*.
 - **Croston’s Method with Syntetos-Boylan Approximation (SBA):** Specialized mathematical model that accurately projects intermittent pharmaceutical demand where standard moving averages fail.
 - **Forecast Horizon Metrics:**
-  - *7-Day Projected Demand:* Immediate operational replenishment requirement.
   - *30-Day Projected Demand:* Monthly procurement planning target.
   - *Model Accuracy Rate (%):* Calculated using in-sample Weighted Absolute Percentage Error (WAPE).
   - *Projected Stock Runout Date:* Estimated date when current inventory will hit zero based on daily burn rate.
@@ -394,8 +393,6 @@ Given demand series $Y = [y_1, y_2, \dots, y_T]$:
 #### Forecast Projections & In-Sample Accuracy:
 - **30-Day Projected Demand:**
   $$\text{Forecast}_{30d} = \max\left(1, \text{round}\left(\hat{y}_{t+1}\right)\right)$$
-- **7-Day Projected Demand:**
-  $$\text{Forecast}_{7d} = \max\left(1, \text{round}\left(\frac{\text{Forecast}_{30d} \times 7}{30}\right)\right)$$
 - **Weighted Absolute Percentage Error (WAPE):**
   $$\text{WAPE} = \frac{\sum_{t=1}^T |y_t - \hat{y}_t|}{\sum_{t=1}^T y_t}$$
 - **Model Accuracy Rate (%):**

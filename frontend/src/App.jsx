@@ -31,6 +31,18 @@ import ExpiryAlerts from "./pages/pharmacist/ExpiryAlerts";
 import DispensingHistory from "./pages/pharmacist/DispensingHistory";
 import AiAssistantPage from "./pages/shared/AiAssistantPage";
 
+import { useAuth } from "./context/AuthContext";
+
+function RootRedirect() {
+  const { user, isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+  const role = user.role?.toLowerCase();
+  return <Navigate to={role === "admin" ? "/admin/dashboard" : "/pharmacist/dashboard"} replace />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -72,7 +84,7 @@ function App() {
               </Route>
 
               {/* Default redirect */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<RootRedirect />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

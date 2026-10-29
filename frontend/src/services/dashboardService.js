@@ -35,6 +35,36 @@ export const dashboardService = {
 
   async getChartData() {
     const [batches, transactions] = await Promise.all([batchService.getAll(), dispensingService.getTransactions()]);
+    const now = new Date();
+    const monthlyDispensing = Array.from({ length: 12 }, (_, index) => {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
+      return {
+        key: `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, "0")}`,
+        month: monthDate.toLocaleDateString(undefined, { month: "short", year: "2-digit" }),
+        quantity: 0,
+      };
+    });
+    const monthlyTotals = new Map(monthlyDispensing.map((month) => [month.key, month]));
+    transactions.forEach((transaction) => {
+      const dateValue = String(transaction.date || "");
+      const dateMatch = dateValue.match(/^(\d{4})-(\d{2})/);
+      const transactionDate = dateMatch ? null : new Date(dateValue);
+      const year = dateMatch ? Number(dateMatch[1]) : transactionDate?.getFullYear();
+      const month = dateMatch ? Number(dateMatch[2]) : transactionDate?.getMonth() + 1;
+      if (!year || !month || month < 1 || month > 12) return;
+
+      const monthData = monthlyTotals.get(`${year}-${String(month).padStart(2, "0")}`);
+      if (!monthData) return;
+
+      const totalQuantity = Number(transaction.totalQuantity);
+      const hasTotalQuantity = transaction.totalQuantity !== null
+        && transaction.totalQuantity !== undefined
+        && transaction.totalQuantity !== "";
+      const quantity = hasTotalQuantity && Number.isFinite(totalQuantity)
+        ? totalQuantity
+        : (transaction.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      monthData.quantity += quantity;
+    });
     const groupedCategories = batches.reduce((groups, batch) => {
       const category = batch.medicine?.category || "Other";
       groups[category] = (groups[category] || 0) + batch.quantity;
@@ -43,7 +73,7 @@ export const dashboardService = {
     const categoryTotals = Object.entries(groupedCategories).map(([name, value], index) => ({ name, value, color: chartColors[index % chartColors.length] }));
     const statusGroups = batches.reduce((groups, batch) => { const status = getStockStatus(batch.quantity, batch.minimumStock); groups[status] = (groups[status] || 0) + 1; return groups; }, {});
     return {
-      monthlyDispensing: [{ month: "Current", quantity: transactions.reduce((sum, transaction) => sum + transaction.totalQuantity, 0) }],
+      monthlyDispensing,
       inventoryByCategory: categoryTotals,
       stockStatus: Object.entries(statusGroups).map(([name, value]) => ({ name, value, color: stockColors[name] })),
       expiryDistribution: ["Safe", "Near Expiry", "Critical", "Expired"].map((name) => ({ name, color: expiryColors[name], value: batches.filter((b) => getExpiryStatus(daysUntilExpiry(b.expiryDate)) === name).length })),

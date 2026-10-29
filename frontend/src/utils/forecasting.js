@@ -17,14 +17,13 @@ const CALENDAR_MONTH_NAMES = [
  *
  * @param {number[]} series - Historical actual demand points
  * @param {number} alpha - Smoothing parameter (default 0.2)
- * @returns {Object} Forecast results including 7d, 30d forecasts and accuracy
+ * @returns {Object} Forecast results including 30d forecast and accuracy
  */
 export function runCrostonSBA(series, alpha = 0.2) {
   if (!Array.isArray(series) || series.length === 0) {
     return {
       fittedValues: [],
       forecast30d: 0,
-      forecast7d: 0,
       forecastAccuracy: 80,
       wape: 0.2,
       series: [],
@@ -64,7 +63,6 @@ export function runCrostonSBA(series, alpha = 0.2) {
   // Next 30-day projected demand from final state
   const monthlyDemandRate = (1 - alpha / 2) * (z / Math.max(0.2, p));
   const forecast30d = Math.max(1, Math.round(monthlyDemandRate));
-  const forecast7d = Math.max(1, Math.round((forecast30d * 7) / 30));
 
   // In-sample Weighted Absolute Percentage Error (WAPE)
   const wape = totalActual > 0 ? totalAbsoluteError / totalActual : 0.15;
@@ -76,7 +74,6 @@ export function runCrostonSBA(series, alpha = 0.2) {
   return {
     fittedValues,
     forecast30d,
-    forecast7d,
     forecastAccuracy,
     wape: Number(wape.toFixed(3)),
     monthlyDemandRate,
@@ -182,11 +179,12 @@ export function buildProductForecast(medicine, batches = [], liveTransactions = 
   const sbaResult = runCrostonSBA(series);
 
   // 6. Stock Risk Determination
-  // High: Usable stock <= minimum stock OR current stock cannot cover next 7 days
+  // High: Usable stock <= minimum stock OR current stock cannot cover 7-day run-rate
   // Medium: Usable stock < 30-day forecast OR within 25% of minimum stock
   // Low: Usable stock comfortably covers 30-day forecast and minimum stock
   let stockRisk = "Low";
-  if (currentStock <= minimumStock || currentStock <= sbaResult.forecast7d) {
+  const sevenDayRunRate = Math.max(1, Math.round((sbaResult.forecast30d * 7) / 30));
+  if (currentStock <= minimumStock || currentStock <= sevenDayRunRate) {
     stockRisk = "High";
   } else if (currentStock < sbaResult.forecast30d || currentStock <= minimumStock * 1.25) {
     stockRisk = "Medium";
@@ -215,31 +213,20 @@ export function buildProductForecast(medicine, batches = [], liveTransactions = 
     });
   }
 
-  // Projections: 7-Day and 30-Day
+  // Projected Forecast: 30-Day Demand
   const lastHistorical = chartData[chartData.length - 1];
   const lastMonthKey = sortedMonthKeys[sortedMonthKeys.length - 1] || "2026-09";
   const lastMonthNum = Number(lastMonthKey.split("-")[1] || 9);
   const nextMonthName = CALENDAR_MONTH_NAMES[lastMonthNum % 12];
-  const followingMonthName = CALENDAR_MONTH_NAMES[(lastMonthNum + 1) % 12];
 
   chartData.push({
-    month: `${nextMonthName} (7d)`,
-    type: "Forecast",
-    actual: null,
-    fitted: null,
-    accuracy: sbaResult.forecastAccuracy,
-    forecast: sbaResult.forecast7d,
-    baseline: lastHistorical.actual,
-  });
-
-  chartData.push({
-    month: `${followingMonthName} (30d)`,
+    month: `${nextMonthName} (Forecast)`,
     type: "Forecast",
     actual: null,
     fitted: null,
     accuracy: sbaResult.forecastAccuracy,
     forecast: sbaResult.forecast30d,
-    baseline: lastHistorical.actual,
+    baseline: lastHistorical ? lastHistorical.actual : null,
   });
 
   return {
@@ -249,7 +236,6 @@ export function buildProductForecast(medicine, batches = [], liveTransactions = 
     strength,
     dosageForm,
     historicalMonths: totalMonths,
-    forecast7d: sbaResult.forecast7d,
     forecast30d: sbaResult.forecast30d,
     currentStock,
     minimumStock,

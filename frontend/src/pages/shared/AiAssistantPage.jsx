@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Sparkles,
   Bot,
@@ -11,13 +12,16 @@ import {
   Check,
   Sliders,
   AlertTriangle,
+  ArrowUpRight,
 } from "lucide-react";
 import { useChatbot } from "../../context/ChatbotContext";
 import { useAuth } from "../../context/AuthContext";
 import { chatbotEngine } from "../../services/chatbotEngine";
 import ChatbotSettingsModal from "../../components/chatbot/ChatbotSettingsModal";
+import FormattedMessage from "../../components/chatbot/FormattedMessage";
 
 export default function AiAssistantPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     messages,
@@ -194,7 +198,30 @@ export default function AiAssistantPage() {
                       : "bg-white border border-slate-200 text-slate-800 rounded-tl-none"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                  <div className="text-sm">
+                    {isUser ? (
+                      <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
+                    ) : (
+                      <FormattedMessage text={m.text} />
+                    )}
+                  </div>
+
+                  {/* Action buttons embedded in assistant response */}
+                  {!isUser && m.actions && m.actions.length > 0 && (
+                    <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex flex-wrap gap-1.5">
+                      {m.actions.map((act, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => navigate(act.path)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold text-xs border border-brand-200/60 transition"
+                        >
+                          <span>{act.label}</span>
+                          <ArrowUpRight className="w-3 h-3 text-brand-500" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                     <span>{new Date(m.timestamp).toLocaleTimeString()}</span>
@@ -244,18 +271,20 @@ export default function AiAssistantPage() {
             Popular Questions:
           </span>
           {[
-            "📦 Show order received awaiting medicine",
+            "⚠️ List expired medicines",
+            "🛒 Auto reorder status & suggestions",
+            "🏷️ FEFO batch for Paracetamol",
+            "🏷️ FEFO batch for Dolo 650",
+            "⏳ Batches expiring in 30 days",
+            "📦 Show low stock medicines",
+            "⚠️ Ibuprofen + Warfarin interaction",
+            "🚨 Dispense Dolo 650 for 45 days check",
             "💊 How to dispense medicine?",
             "🏷️ What is FEFO?",
-            "🏷️ FEFO batch for Dolo 650",
-            "⚠️ Ibuprofen + Warfarin interaction",
             "➕ How to add a medicine?",
+            "📊 Explain demand forecasting formula",
             "🛡️ Admin vs Pharmacist roles",
-            "📷 How to scan barcode?",
-            "⚖️ How to record damaged stock?",
-            "📊 Explain Croston-SBA forecasting",
-            "🏷️ List all batches",
-            "📄 How to export reports?",
+            "📦 Show order received awaiting medicine",
           ].map((item, i) => (
             <button
               key={i}

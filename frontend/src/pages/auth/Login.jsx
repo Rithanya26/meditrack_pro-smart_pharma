@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HeartPulse, Eye, EyeOff, Mail, Lock, ArrowRight, ShieldCheck, Clock, BarChart3 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -8,7 +8,7 @@ import Button from "../../components/ui/Button";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const toast = useToast();
 
   const [email, setEmail] = useState("");
@@ -18,6 +18,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (user) {
+      const role = user.role?.toLowerCase();
+      navigate(role === "admin" ? "/admin/dashboard" : "/pharmacist/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
 
   const validate = () => {
     const e = {};
@@ -35,13 +42,23 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const user = await login(email, password);
-      toast.success(`Welcome back, ${user.name.split(" ")[0]}!`);
+      const loggedUser = await login(email, password);
+      toast.success(`Welcome back, ${loggedUser.name.split(" ")[0]}!`);
       const from = location.state?.from?.pathname;
-      if (from) {
+      const role = loggedUser.role?.toLowerCase();
+      const isAdmin = role === "admin";
+      const isPharmacist = role === "pharmacist";
+
+      const isValidFrom =
+        from &&
+        !from.startsWith("/unauthorized") &&
+        !from.startsWith("/login") &&
+        (isAdmin || (isPharmacist && !from.startsWith("/admin")));
+
+      if (isValidFrom) {
         navigate(from, { replace: true });
       } else {
-        navigate(user.role === "admin" ? "/admin/dashboard" : "/pharmacist/dashboard", { replace: true });
+        navigate(isAdmin ? "/admin/dashboard" : "/pharmacist/dashboard", { replace: true });
       }
     } catch (err) {
       setError(err.message || "Login failed. Please try again.");

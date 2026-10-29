@@ -24,14 +24,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const userRole = user?.role?.toLowerCase();
+
   const value = {
     user,
     loading,
     login,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
-    isPharmacist: user?.role === "pharmacist",
+    isAdmin: userRole === "admin",
+    isPharmacist: userRole === "pharmacist",
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -810,6 +810,183 @@ export const chatbotEngine = {
     // Run NLP Engine for tokenization, NER entity extraction, and intent classification
     const nlp = nlpProcessor.parse(query, context.medicines, context.batches);
 
+    // 0A. List Expired Medicines Query
+    const isExpiredQuery =
+      nlp.intent === "EXPIRED_ACTION" ||
+      q.includes("expired medicine") ||
+      q.includes("expired medicines") ||
+      q.includes("list expired") ||
+      q.includes("show expired") ||
+      q === "expired" ||
+      q === "expired batches";
+
+    if (isExpiredQuery) {
+      const expiredBatches = context.batches.filter((b) => b.daysLeft <= 0 || b.status?.toLowerCase() === "expired");
+      if (expiredBatches.length > 0) {
+        return {
+          text: `⚠️ **Quarantined & Expired Medicines List**\n\n` +
+            `The system has detected **${expiredBatches.length} expired consignment(s)** in the pharmacy database. Under strict GxP & FEFO protocol, these are **automatically locked out** from patient dispensing:\n\n` +
+            expiredBatches.map((b, idx) => {
+              const daysAgo = Math.abs(b.daysLeft || 0);
+              return `${idx + 1}. **${b.medicineName}** (${b.genericName || "Drug"})\n` +
+                `   • Batch Code: \`${b.batchNumber}\`\n` +
+                `   • Quarantined Stock: **${b.quantity} units**\n` +
+                `   • Expiry Date: **${b.expiryDate}** (${daysAgo > 0 ? `${daysAgo} days ago` : "Expired"})\n` +
+                `   • Supplier: \`${b.supplier || "Standard Supplier"}\`\n` +
+                `   • Status: \`🔴 QUARANTINED / EXPIRED\``;
+            }).join("\n\n") +
+            `\n\n` +
+            `> **Mandatory Action:** Remove these physical units to the locked quarantine container and complete the adjustment under **Inventory Management**.`,
+          type: "danger",
+          actions: [
+            { label: "Review Expired Horizon", path: role === "admin" ? "/admin/expiry" : "/pharmacist/expiry-alerts" },
+            { label: "Inventory Write-off", path: "/admin/inventory" },
+          ],
+        };
+      } else {
+        const nearExpiry = context.batches.filter((b) => b.daysLeft > 0 && b.daysLeft <= 30);
+        return {
+          text: `✅ **No Expired Medicines in Active Stock**\n\n` +
+            `All registered batches currently have valid shelf-lives.\n\n` +
+            (nearExpiry.length > 0
+              ? `⏳ **Proactive Warning — ${nearExpiry.length} batch(es) nearing expiry within 30 days:**\n` +
+                nearExpiry.map((b) => `• **${b.medicineName}** (Batch \`${b.batchNumber}\`): **${b.quantity} units**, Expires on **${b.expiryDate}** (**${b.daysLeft} days left**)`).join("\n") +
+                `\n\n` +
+                `These batches are actively prioritized by FEFO for immediate dispensing.`
+              : `Formulary inventory health is optimal with no critical batches.`),
+          type: "success",
+          actions: [
+            { label: "Check Expiry Radar", path: role === "admin" ? "/admin/expiry" : "/pharmacist/expiry-alerts" },
+            { label: "Dispense via FEFO", path: "/pharmacist/dispense" },
+          ],
+        };
+      }
+    }
+
+    // 0B. Auto Reorder Status & Suggestions Query
+    const isReorderQuery =
+      nlp.intent === "REORDER_PROCUREMENT" ||
+      q.includes("auto reorder") ||
+      q.includes("reorder status") ||
+      q.includes("reorder suggestions") ||
+      q.includes("reorder order") ||
+      q.includes("reorders") ||
+      q === "reorder";
+
+    if (isReorderQuery) {
+      const lowStockMeds = [];
+      context.medicines.forEach((med) => {
+        const medBatches = context.batches.filter((b) => String(b.medicineId) === String(med.id) && b.daysLeft > 0);
+        const totalStock = medBatches.reduce((s, b) => s + b.quantity, 0);
+        const minStock = med.minimumStock || 40;
+        if (totalStock <= minStock) {
+          const suggestedROQ = Math.max(minStock * 2 - totalStock, 50);
+          lowStockMeds.push({
+            name: med.brandName,
+            generic: med.genericMedicine || med.genericName,
+            currentStock: totalStock,
+            minStock: minStock,
+            suggestedROQ: suggestedROQ,
+          });
+        }
+      });
+
+      const pendingOrders = context.allOrders.filter((o) => (o.status || "").toUpperCase() === "ORDERED");
+      const receivedOrders = context.allOrders.filter((o) => (o.status || "").toUpperCase() === "RECEIVED");
+
+      return {
+        text: `🛒 **MediTrack Auto-Reorder & Replenishment Intelligence**\n\n` +
+          `MediTrack Pro calculates replenishment dynamically using **Croston-SBA Demand Forecasting** and **Safety Stock (SS)** buffers.\n\n` +
+          `• **Replenishment Trigger Rule:** Stock falls to or below Catalog Minimum Safety Threshold.\n` +
+          `• **Recommended Order Quantity (ROQ) Formula:**\n` +
+          `$$ROQ = (Minimum Stock + 30-Day Forecast Demand + Safety Stock) - Current Stock$$\n\n` +
+          (lowStockMeds.length > 0
+            ? `⚠️ **Medicines Requiring Reorder (${lowStockMeds.length} items flagged):**\n` +
+              lowStockMeds.map((m, idx) =>
+                `${idx + 1}. **${m.name}** (${m.generic || "Medicine"})\n` +
+                `   • Current Stock: **${m.currentStock} units** | Min Safety Threshold: ${m.minStock}\n` +
+                `   • Suggested Reorder Quantity: **${m.suggestedROQ} units**\n` +
+                `   • Status: \`🟠 REORDER REQUIRED\``
+              ).join("\n\n") + `\n\n`
+            : `✅ **Stock Health Optimal:** All medicines currently exceed minimum safety thresholds.\n\n`) +
+          `📋 **Purchase Order Status:**\n` +
+          `• Pending Delivery (In-Transit): **${pendingOrders.length} order(s)**\n` +
+          `• Inwarded & Verified: **${receivedOrders.length} order(s)**`,
+        type: lowStockMeds.length > 0 ? "warning" : "info",
+        actions: [
+          { label: "Open Auto Reorder", path: "/admin/reorder" },
+          { label: "Order Received Intake", path: "/admin/order-received" },
+          { label: "Demand Insights", path: "/admin/insights" },
+        ],
+      };
+    }
+
+    // 0C. Dedicated FEFO Batch for Paracetamol (and variants)
+    const isParacetamolFefo =
+      (q.includes("paracetamol") || q.includes("paracetomol") || q.includes("pcm")) &&
+      (q.includes("fefo") || q.includes("batch") || q.includes("dispense") || q.includes("which"));
+
+    if (isParacetamolFefo) {
+      const pcmMeds = context.medicines.filter((m) => {
+        const brand = (m.brandName || "").toLowerCase();
+        const generic = (m.genericMedicine || m.genericName || "").toLowerCase();
+        return (
+          generic.includes("paracetamol") ||
+          brand.includes("paracetamol") ||
+          brand.includes("pcm") ||
+          brand.includes("dolo") ||
+          brand.includes("calpol") ||
+          brand.includes("crocin")
+        );
+      });
+
+      const allPcmBatches = [];
+      pcmMeds.forEach((m) => {
+        const batches = context.batches.filter((b) => String(b.medicineId) === String(m.id) && b.quantity > 0 && b.daysLeft > 0);
+        batches.forEach((b) => {
+          allPcmBatches.push({ ...b, medicine: m });
+        });
+      });
+
+      allPcmBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+      const overallFefo = allPcmBatches[0];
+
+      return {
+        text: `🏷️ **FEFO Batch Allocation for Paracetamol (All Formulations)**\n\n` +
+          `MediTrack Pro enforces strict **First-Expired, First-Out (FEFO)** to prevent perishability waste across all Paracetamol brands in your pharmacy:\n\n` +
+          `🥇 **Primary Recommended FEFO Batch to Dispense First:**\n` +
+          (overallFefo
+            ? `• **Medicine:** **${overallFefo.medicineName}** (${overallFefo.medicine?.dosageForm || "Tablet"} ${overallFefo.medicine?.strength || "650mg"})\n` +
+              `• **Allocated Batch Code:** \`${overallFefo.batchNumber}\`\n` +
+              `• **Expiry Date:** **${overallFefo.expiryDate}** (**${overallFefo.daysLeft} days remaining**)\n` +
+              `• **Available Quantity:** **${overallFefo.quantity} units**\n` +
+              `• **Supplier:** \`${overallFefo.supplier || "Standard Supplier"}\`\n` +
+              `• **Priority:** \`🟢 FEFO PRIORITY #1 (Earliest Expiry)\`\n\n`
+            : `• *No active batches in stock.*\n\n`) +
+          `📋 **FEFO Rotation Order Across All Paracetamol Brands:**\n` +
+          pcmMeds.map((med) => {
+            const medBatches = context.batches.filter((b) => String(b.medicineId) === String(med.id) && b.quantity > 0 && b.daysLeft > 0);
+            medBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+            const firstBatch = medBatches[0];
+            const totalUnits = medBatches.reduce((s, b) => s + b.quantity, 0);
+
+            return `• **${med.brandName}** (${med.strength || "650mg"} ${med.dosageForm || "Tablet"}):\n` +
+              (firstBatch
+                ? `  - Earliest Batch: \`${firstBatch.batchNumber}\` (${firstBatch.quantity}u, Exp: **${firstBatch.expiryDate}**, **${firstBatch.daysLeft}d left**)\n` +
+                  `  - Total Stock: **${totalUnits} units** across ${medBatches.length} batch(es)`
+                : `  - *Out of stock*`);
+          }).join("\n\n") +
+          `\n\n` +
+          `⚠️ **Clinical Safety Rule:** Cap cumulative patient intake at **4,000 mg / 24 hours** (2,000 mg in hepatic impairment) regardless of which Paracetamol brand is dispensed.`,
+        type: "success",
+        actions: [
+          { label: "Dispense Paracetamol", path: "/pharmacist/dispense" },
+          { label: "View Batches", path: "/admin/batches" },
+          { label: "Expiry Horizon", path: role === "admin" ? "/admin/expiry" : "/pharmacist/expiry-alerts" },
+        ],
+      };
+    }
+
     // 1. Check for drug interaction queries (only if explicitly inquiring about interaction/combination)
     const isExplicitInteraction =
       (q.includes("interaction") || q.includes("interact") || q.includes("combine") || q.includes("together") || q.includes("contraindication") || q.includes("safe with") || q.includes("take with")) &&
@@ -867,7 +1044,7 @@ export const chatbotEngine = {
       if (conflictRes.found) {
         if (conflictRes.isConflict) {
           return {
-            text: `🚨 **Patient Expiry Conflict Detected! ($DaysRemaining < TreatmentDays$)**\n\n` +
+            text: `🚨 **Patient Expiry Conflict Detected! (Days Remaining < Treatment Days)**\n\n` +
               `• **Prescription Duration:** \`${days} Days\`\n` +
               `• **Primary FEFO Batch:** \`${conflictRes.candidateBatch.batchNumber}\` (Expires in **${conflictRes.candidateBatch.daysLeft} days** on ${conflictRes.candidateBatch.expiryDate})\n` +
               `• **Risk:** Batch will expire **BEFORE** the patient finishes their ${days}-day treatment course!\n\n` +
@@ -914,7 +1091,7 @@ export const chatbotEngine = {
           `• **FEFO vs. FIFO:**\n` +
           `  - **FIFO (First-In, First-Out):** Sells the oldest received stock. In pharmacy, newer shipments can arrive with *shorter* shelf-lives; FIFO leads to catastrophic expired inventory on shelves.\n` +
           `  - **FEFO (First-Expired, First-Out):** Prioritizes batches nearing expiry first, minimizing write-offs and guaranteeing that patients receive safe, potent medication.\n` +
-          `• **Patient Regimen Protection:** MediTrack automatically validates $DaysRemaining \\ge TreatmentDays$. If a batch would expire during an active prescription course, the system blocks allocation and selects a safer batch.`,
+          `• **Patient Regimen Protection:** MediTrack automatically validates (Days Remaining ≥ Treatment Days). If a batch would expire during an active prescription course, the system blocks allocation and selects a safer batch.`,
         type: "info",
         actions: [
           { label: "Check Expiry Radar", path: role === "admin" ? "/admin/expiry" : "/pharmacist/expiry-alerts" },
@@ -1131,7 +1308,7 @@ export const chatbotEngine = {
           `2. **Locate Medicine:** Search by brand name, generic name, or scan barcode via camera or USB scanner.\n` +
           `3. **Automatic FEFO Selection:** The system automatically prioritizes the earliest expiring usable batch.\n` +
           `4. **Safety Verification:**\n` +
-          `   • Enter prescription duration: The algorithm verifies $DaysRemaining \\ge TreatmentDays$.\n` +
+          `   • Enter prescription duration: The algorithm verifies (Days Remaining ≥ Treatment Days).\n` +
           `   • Checks for drug-drug contraindications (e.g. Warfarin + NSAIDs).\n` +
           `5. **Cart & Invoice:** Add to cart, review quantities, and click **"Complete Dispense & Print Invoice"** to deduct stock and generate the receipt.`,
         type: "info",
@@ -1304,7 +1481,7 @@ export const chatbotEngine = {
           `  *(Barred from POS dispensing to maintain independent audit integrity)*.\n\n` +
           `• 🩺 **Licensed Pharmacist (\`pharmacist\`):**\n` +
           `  - Operates the clinical **Dispense Launchpad** with FEFO batch assignment.\n` +
-          `  - Evaluates prescription conflict warnings ($DaysRemaining < TreatmentDays$).\n` +
+          `  - Evaluates prescription conflict warnings (Days Remaining < Treatment Days).\n` +
           `  - Reviews live drug-drug interactions and monitors daily expiry alerts.\n\n` +
           `*To switch accounts in demo mode, sign in with \`admin@meditrack.com\` or \`pharmacist@meditrack.com\`.*`,
         type: "info",
@@ -1327,17 +1504,17 @@ export const chatbotEngine = {
     ) {
       return {
         text: `📐 **Procurement Formulas: Safety Stock & ROQ**\n\n` +
-          `MediTrack computes replenishment quantities via statistically rigorous inventory models:\n\n` +
-          `1. **Safety Stock ($SS$):**\n` +
-          `   $$SS = Z \\times \\sigma_{\\text{daily}} \\times \\sqrt{L}$$\n` +
-          `   • $Z = 1.65$ (Configured for 95% service level / 5% stockout probability).\n` +
-          `   • $L = 7\\text{ days}$ (Supplier Lead Time turnaround).\n` +
-          `   • $\\sigma_{\\text{daily}}$ = Standard deviation of historical daily demand.\n\n` +
+          `MediTrack computes replenishment quantities via statistically calibrated inventory models:\n\n` +
+          `1. **Safety Stock (SS):**\n` +
+          `$$Safety Stock (SS) = Z × σ_daily × √Lead_Time$$\n` +
+          `• **Z = 1.65** (Configured for 95% service level / 5% stockout risk).\n` +
+          `• **Lead Time = 7 days** (Supplier delivery turnaround).\n` +
+          `• **σ_daily** = Standard deviation of historical daily demand.\n\n` +
           `2. **Recommended Order Quantity (ROQ):**\n` +
-          `   $$ROQ = \\max\\left(0, (S + D_{30} + SS) - I_{\\text{curr}}\\right)$$\n` +
-          `   • $S$ = Catalog Minimum Stock threshold.\n` +
-          `   • $D_{30}$ = 30-day Croston-SBA forecasted demand.\n` +
-          `   • $I_{\\text{curr}}$ = Total usable inventory currently on hand.\n\n` +
+          `$$ROQ = (Minimum Stock + 30-Day Forecast Demand + Safety Stock) - Current Stock$$\n` +
+          `• **Minimum Stock** = Catalog threshold.\n` +
+          `• **30-Day Demand** = Croston-SBA forecasted consumption.\n` +
+          `• **Current Stock** = Total usable inventory currently on hand.\n\n` +
           `This ensures optimal capital allocation without risking stockouts of vital therapeutics.`,
         type: "info",
         actions: [
@@ -1360,7 +1537,7 @@ export const chatbotEngine = {
       return {
         text: `☣️ **Pharmaceutical Quarantine & Expired Drug Protocol**\n\n` +
           `MediTrack strictly prevents expired medication from reaching patients:\n\n` +
-          `1. **System Auto-Lockout:** Any batch reaching $DaysRemaining \\le 0$ is automatically locked out of the dispensing cart.\n` +
+          `1. **System Auto-Lockout:** Any batch reaching (Days Remaining ≤ 0) is automatically locked out of the dispensing cart.\n` +
           `2. **Physical Quarantine:** Remove physical boxes from shelves immediately and place them inside the locked, labeled red **Quarantine Container**.\n` +
           `3. **Record Stock Adjustment:** Navigate to **Inventory**, select the expired batch, and execute adjustment with reason code \`EXPIRED\`.\n` +
           `4. **Disposal Manifest:** Hand over to certified biomedical waste contractor or initiate supplier return with an authorized destruction manifest.\n\n` +
@@ -1589,8 +1766,8 @@ export const chatbotEngine = {
       return {
         text: `👤 **User Account & Session Management**\n\n` +
           `• **Signed In User:** **${user?.name || "Dr. Sarah Mitchell"}**\n` +
-          `• **Assigned Role:** \`${user?.role === "admin" ? "Pharmacy Administrator" : "Licensed Pharmacist"}\`\n` +
-          `• **Email:** \`${user?.email || (user?.role === "admin" ? "admin@meditrack.com" : "pharmacist@meditrack.com")}\`\n\n` +
+          `• **Assigned Role:** \`${user?.role?.toLowerCase() === "admin" ? "Pharmacy Administrator" : "Licensed Pharmacist"}\`\n` +
+          `• **Email:** \`${user?.email || (user?.role?.toLowerCase() === "admin" ? "admin@meditrack.com" : "pharmacist@meditrack.com")}\`\n\n` +
           `To manage your profile or change demo accounts:\n` +
           `1. Tap your profile avatar in the top right navigation bar.\n` +
           `2. Default demo credentials:\n` +
@@ -1616,7 +1793,7 @@ export const chatbotEngine = {
       return {
         text: `🏥 **MediTrack Pro: Smart Pharmaceutical Inventory & Clinical Safety System**\n\n` +
           `MediTrack Pro is an enterprise hospital & community pharmacy management platform built for zero-waste inventory and patient safety:\n\n` +
-          `• 🏷️ **Clinical FEFO Allocation:** First-Expired, First-Out batch selection with prescription conflict checking ($DaysRemaining < TreatmentDays$).\n` +
+          `• 🏷️ **Clinical FEFO Allocation:** First-Expired, First-Out batch selection with prescription conflict checking (Days Remaining < Treatment Days).\n` +
           `• ⚠️ **Drug Interaction Radar:** Live contraindication and bleeding hazard warnings.\n` +
           `• 📊 **Croston-SBA Demand Forecasting:** Mathematical algorithm tailored for intermittent, lumpy pharmaceutical consumption.\n` +
           `• 🔄 **Closed-Loop Procurement:** Safety stock triggers auto-reorders, received at **Order Received** to create new batches.\n` +
@@ -1754,17 +1931,30 @@ export const chatbotEngine = {
     }
 
     // 28. Croston-SBA Demand Forecasting explanation
-    if (q.includes("croston") || q.includes("forecast") || q.includes("sba") || q.includes("demand") || q.includes("algorithm")) {
+    if (
+      nlp.intent === "CROSTON_FORECAST" ||
+      q.includes("croston") ||
+      q.includes("forecast") ||
+      q.includes("sba") ||
+      q.includes("demand forecasting") ||
+      q.includes("forecasting formula") ||
+      q.includes("demand formula")
+    ) {
       return {
-        text: `📊 **Croston's Method with Syntetos-Boylan Approximation (SBA)**\n\n` +
-          `MediTrack Pro uses the Croston-SBA mathematical model specifically engineered for **intermittent, non-continuous pharmaceutical demand**:\n\n` +
-          `1. **Demand Separation:** Breaks dispensing history into two independent exponential smoothing series:\n` +
-          `   • Non-zero demand size ($z_t$ with smoothing parameter $\\alpha$)\n` +
-          `   • Inter-arrival interval between demands ($p_t$ with parameter $\\beta$)\n` +
-          `2. **SBA Correction Factor:** Corrects Croston's positive bias by scaling estimates by $(1 - \\frac{\\beta}{2})$:\n` +
-          `   $$\\hat{y}_{t+1} = \\left(1 - \\frac{\\beta}{2}\\right) \\frac{z_t}{p_t}$$\n` +
-          `3. **Safety Stock & ROQ:** Combines lead time ($L = 7\\text{d}$), service level ($Z = 1.65$ for 95%), and daily standard deviation to compute the Suggested Reorder Quantity.\n\n` +
-          `This prevents stockouts of life-saving drugs while eliminating wasteful capital lockup in overstocked perishables.`,
+        text: `📊 **Croston-SBA Pharmaceutical Demand Forecasting Model**\n\n` +
+          `Standard moving average and exponential smoothing models fail in hospital pharmacies because medicine consumption is **intermittent and lumpy** (days with zero dispensing interspersed with sudden clinical spikes).\n\n` +
+          `MediTrack Pro decomposes demand into two independent smoothed time-series and applies the **Syntetos-Boylan Approximation (SBA)** correction:\n\n` +
+          `$$Forecast Demand = (1 - β / 2) × (z / p)$$\n\n` +
+          `• **z** = Exponentially smoothed demand magnitude during non-zero dispensing periods\n` +
+          `• **p** = Exponentially smoothed inter-arrival time between demand events\n` +
+          `• **(1 - β / 2)** = Syntetos-Boylan de-biasing factor (removes Croston's inherent positive bias)\n` +
+          `• **α = 0.2, β = 0.2** = Calibrated smoothing parameters\n\n` +
+          `$$Safety Stock (SS) = Z × σ_daily × √Lead_Time$$\n\n` +
+          `• **Z = 1.65** = 95% service availability\n` +
+          `• **σ_daily** = Standard deviation of historical daily consumption\n` +
+          `• **Lead Time = 7 Days** = Supplier turnaround\n\n` +
+          `$$Recommended Order Qty (ROQ) = (Min Stock + 30-Day Demand + Safety Stock) - Current Stock$$\n\n` +
+          `This mathematical framework eliminates stockouts of essential therapeutics while preventing capital wastage from expired inventory.`,
         type: "info",
         actions: [
           { label: "Explore Smart Insights", path: "/admin/insights" },
@@ -2042,7 +2232,7 @@ export const chatbotEngine = {
     }).join("\n");
 
     const systemPrompt = `You are MediTrack Pro's Senior Clinical Pharmacy Assistant.
-You assist ${user?.name || "the user"} (${user?.role === "admin" ? "Pharmacy Administrator" : "Licensed Pharmacist"}).
+You assist ${user?.name || "the user"} (${user?.role?.toLowerCase() === "admin" ? "Pharmacy Administrator" : "Licensed Pharmacist"}).
 You are embedded directly within an enterprise pharmacy system.
 
 LIVE PHARMACY INVENTORY & BATCH DATABASE:

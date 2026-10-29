@@ -13,12 +13,12 @@ export default function DataTable({ columns, data, rowKey = "id", onRowClick, em
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-slate-200 bg-slate-50/50">
+          <tr className="border-b-2 border-slate-200 bg-slate-50">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={classNames(
-                  "px-5 py-3 text-left font-semibold text-slate-600 whitespace-nowrap",
+                  "px-5 py-3 text-left font-semibold text-slate-600 whitespace-nowrap uppercase text-xs tracking-wider",
                   col.align === "right" && "text-right",
                   col.align === "center" && "text-center",
                   col.width && `w-${col.width}`
@@ -43,7 +43,7 @@ export default function DataTable({ columns, data, rowKey = "id", onRowClick, em
                 <td
                   key={col.key}
                   className={classNames(
-                    "px-5 py-3 text-slate-700 whitespace-nowrap",
+                    "px-5 py-3.5 text-slate-700 whitespace-nowrap",
                     col.align === "right" && "text-right",
                     col.align === "center" && "text-center",
                     col.className

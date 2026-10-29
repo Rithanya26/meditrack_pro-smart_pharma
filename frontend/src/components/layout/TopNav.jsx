@@ -13,7 +13,6 @@ import {
   LogOut,
   Settings,
   Sparkles,
-  Bot,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChatbot } from "../../context/ChatbotContext";
@@ -22,25 +21,25 @@ import { formatDateTime, classNames } from "../../utils/helpers";
 
 const pageTitles = {
   "/admin/dashboard": "Dashboard",
-  "/admin/medicines": "Medicine Management",
-  "/admin/batches": "Batch Management",
-  "/admin/inventory": "Inventory Management",
+  "/admin/medicines": "Medicine Catalog",
+  "/admin/batches": "Medicine Batches",
+  "/admin/inventory": "Stock & Inventory",
   "/admin/dispensing": "Dispensing Records",
   "/admin/expiry": "Expiry Tracking",
-  "/admin/pharmacists": "Pharmacist Management",
-  "/admin/audit-logs": "Audit Logs",
+  "/admin/pharmacists": "Pharmacist Accounts",
+  "/admin/audit-logs": "Audit Log",
   "/admin/reports": "Reports",
-  "/admin/insights": "Smart Insights",
-  "/admin/reorder": "Auto Reorder",
-  "/admin/order-received": "Order Received",
+  "/admin/insights": "Demand Forecasting",
+  "/admin/reorder": "Reorder Stock",
+  "/admin/order-received": "Receive Supplier Orders",
   "/admin/settings": "Settings",
-  "/admin/assistant": "Chatbot",
+  "/admin/assistant": "AI Assistant",
   "/pharmacist/dashboard": "Pharmacist Dashboard",
-  "/pharmacist/medicines": "Medicines",
+  "/pharmacist/medicines": "Medicine Catalog",
   "/pharmacist/dispense": "Dispense Medicine",
   "/pharmacist/expiry-alerts": "Expiry Alerts",
-  "/pharmacist/history": "Dispensing History",
-  "/pharmacist/assistant": "Chatbot",
+  "/pharmacist/history": "My Dispensing History",
+  "/pharmacist/assistant": "AI Assistant",
 };
 
 const notifIcons = {
@@ -80,7 +79,7 @@ export default function TopNav({ onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 lg:px-6 py-3">
+    <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 lg:px-6 py-3 print:hidden">
       <div className="flex items-center justify-between gap-4">
         {/* Left: menu + title */}
         <div className="flex items-center gap-3">
@@ -106,7 +105,7 @@ export default function TopNav({ onMenuClick }) {
             title="Toggle MediTrack Chatbot"
           >
             <Sparkles className="w-3.5 h-3.5 text-brand-600 animate-pulse" />
-            <span className="hidden sm:inline">Chatbot</span>
+            <span className="hidden sm:inline">AI Assistant</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           </button>
 
@@ -202,7 +201,7 @@ export default function TopNav({ onMenuClick }) {
                     <User className="w-4 h-4" /> My Profile
                   </button>
                   <button
-                    onClick={() => navigate(user?.role === "admin" ? "/admin/settings" : "/pharmacist/dashboard")}
+                    onClick={() => navigate(user?.role?.toLowerCase() === "admin" ? "/admin/settings" : "/pharmacist/dashboard")}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
                   >
                     <Settings className="w-4 h-4" /> Settings

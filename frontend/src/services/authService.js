@@ -1,6 +1,7 @@
 import api from "./api";
 
 function normalizeUser(user) {
+  if (!user) return null;
   return { ...user, role: user.role?.toLowerCase(), status: user.status?.toLowerCase() };
 }
 
@@ -24,7 +25,12 @@ export const authService = {
 
   getCurrentUser() {
     const stored = localStorage.getItem("meditrack_user");
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    try {
+      return normalizeUser(JSON.parse(stored));
+    } catch {
+      return null;
+    }
   },
 
   isAuthenticated() {
